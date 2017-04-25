@@ -1,3 +1,6 @@
+RewriteEngine On
+RewriteBase /
+
 RewriteRule ^favicon(.*)$ static/favicon$1 [L]
 RewriteRule ^static/(.*)$ static/$1 [QSA,L]
 RewriteRule ^(.*)/static/(.*)$ $1/static/$2 [QSA,L]
