@@ -1,33 +1,91 @@
 <?php
 
-ini_set( 'register_argc_argv', true );
-
-if ( !is_dir( getcwd() . '/vendor' ) ) {
+if ( !is_dir( getcwd() . DIRECTORY_SEPARATOR . 'vendor' ) ) {
 	echo "\n\nPlease run Phresto CLI from root folder of your project!\n\n";
 	die(1);
 }
 
 define( 'PHRESTO_ROOT', getcwd() );
 
-require_once getcwd() . '/vendor/autoload.php';
+require_once implode(DIRECTORY_SEPARATOR, [getcwd(), 'vendor', 'autoload.php']);
 
 $functions = [
-	'--updatemodulesini' => [ 'func' => 'updatemodulesini', 'desc' => 'Updates/creates conf/modules.ini' ],
-	'-umi' => [ 'func' => 'updatemodulesini', 'desc' => 'Updates/creates conf/modules.ini' ],
-	'--help' => [ 'func' => 'help', 'desc' => 'Prints help information' ],
-	'-h' => [ 'func' => 'help', 'desc' => 'Prints help information' ]
+	'--new/-n' => [ 'func' => 'newone', 'desc' => 'Creates empty Phresto project with built-in modules' ],
+	'--install/-i [name]' => [ 'func' => 'install', 'desc' => 'Install module (composer package name required)' ],
+	'--update/-u [name]' => [ 'func' => 'update', 'desc' => 'Update module (composer package name required)' ],
+	'--modules/-m' => [ 'func' => 'updatemodulesini', 'desc' => 'Updates/creates conf/modules.ini' ],
+	'--help/-h' => [ 'func' => 'help', 'desc' => 'Prints help information' ]
 ];
 
+$run = 0;
 foreach ($functions as $key => $value) {
-	$run = 0;
-	if (in_array($key, $argv)) {
+	$keys = explode('/', $key);
+	if (in_array($keys[0], $argv) || in_array($keys[1], $argv)) {
 		$value['func']();
 		$run++;
 	}
+}
+if ($run == 0) {
+	help();
+};
 
-	if ($run == 0) {
-		help();
+function install() {
+	
+}
+
+function update() {
+
+}
+
+function newone() {
+	echo "Setting up new project...\n";
+	echo "Create project files...\n";
+
+	copyDir(implode(DIRECTORY_SEPARATOR, [__DIR__ , '..', 'template']), PHRESTO_ROOT );
+	
+	$db = [];
+	do {
+		echo "Tu set database type db config name. Enter to continue: ";
+		$answer = getLine();
+		if (!empty($answer)) {
+			$db = [$answer => []];
+			echo "db type [mysql]: ";
+			$db[$answer]['type'] = getLine();
+			if (empty($db[$answer]['type'])) $db[$answer]['type'] = 'mysql';
+			echo "host [localhost]: ";
+			$db[$answer]['host'] = getLine();
+			if (empty($db[$answer]['host'])) $db[$answer]['host'] = 'localhost';
+			echo "user [root]: ";
+			$db[$answer]['user'] = getLine();
+			if (empty($db[$answer]['user'])) $db[$answer]['user'] = 'root';
+			echo "password []: ";
+			$db[$answer]['passwd'] = getLine();
+			if (empty($db[$answer]['passwd'])) $db[$answer]['passwd'] = '';
+			echo "db name [phresto]: ";
+			$db[$answer]['dbname'] = getLine();
+			if (empty($db[$answer]['dbname'])) $db[$answer]['dbname'] = 'phresto';
+		}
+
+	} while(!empty($answer));
+
+	if (!empty($db)) {
+		Phresto\Config::saveConfig('db', $db);
 	}
+
+	echo "Install bower dependencies...\n";
+	passthru('bower install');
+
+	echo "Done\n";
+}
+
+function getLine() {
+	if (PHP_OS == 'WINNT') {
+	  $line = stream_get_line(STDIN, 1024, PHP_EOL);
+	} else {
+	  $line = readline();
+	}
+
+	return $line;
 }
 
 function updatemodulesini() {
@@ -42,6 +100,8 @@ function updatemodulesini() {
 function help() {
 	global $functions;
 
+	$usage = 'vendor' . DIRECTORY_SEPARATOR . 'bin' . DIRECTORY_SEPARATOR . 'phresto';
+
 	echo <<<END
    _o   ___  ___       ___  ___  __  ____  ____
  _//___/ o/ /__/ /__/ /__/ /__  /_    /   /   /
@@ -49,15 +109,30 @@ function help() {
 _O_____O____________________________________
                                  Phresto CLI
 
-Usage: vendor\bin\phresto [options]
+Usage: 
+# {$usage} [options]
 
 Available options:
 
 END;
 
 	foreach ($functions as $key => $value) {
-		echo "\t{$key}" . str_repeat(' ', 20 - mb_strlen($key)) . " - {$value['desc']}\n";
+		echo "  {$key}" . str_repeat(' ', 25 - mb_strlen($key)) . " - {$value['desc']}\n";
 	}
 
 	echo "\n";
+}
+
+function copyDir($source, $dest) {
+	foreach (
+		$iterator = new \RecursiveIteratorIterator(
+		  new \RecursiveDirectoryIterator($source, \RecursiveDirectoryIterator::SKIP_DOTS),
+		  \RecursiveIteratorIterator::SELF_FIRST) as $item
+	) {
+		if ($item->isDir()) {
+			@mkdir($dest . DIRECTORY_SEPARATOR . $iterator->getSubPathName());
+		} else {
+			@copy($item, $dest . DIRECTORY_SEPARATOR . $iterator->getSubPathName());
+		}
+	}
 }
