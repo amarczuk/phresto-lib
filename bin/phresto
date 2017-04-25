@@ -1,5 +1,7 @@
 <?php
 
+ini_set( 'register_argc_argv', true );
+
 if ( !is_dir( getcwd() . '/vendor' ) ) {
 	echo "\n\nPlease run Phresto CLI from root folder of your project!\n\n";
 	die(1);
