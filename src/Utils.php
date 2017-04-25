@@ -14,7 +14,7 @@ class Utils {
 			$modules = Config::getConfig( 'modules' );
 		}
 
-		if ( $path[0] != 'Phresto' && $path[1] != 'Modules' ) return;
+		if ( ( empty( $path[0] ) || $path[0] != 'Phresto' ) && ( empty( $path[1] ) || $path[1] != 'Modules' ) ) return;
 		
 		foreach ( $modules as $module => $files ) {
 			if ( !empty( $path[3] ) && !empty( $files[$path[2]] ) ) {
