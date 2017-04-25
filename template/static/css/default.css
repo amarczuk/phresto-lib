@@ -1,0 +1,157 @@
+body {
+    font-family: 'Khand', arial, sans-serif;
+    font-size: 0.9rem;
+    color: #333;
+    line-height: 2;
+    letter-spacing: 0.09em;
+}
+
+h1, h2, h3, h4, h5, h6,
+.top-bar-section ul li > a,
+.label,
+button, .button,
+select {
+    font-family: 'Khand', arial, sans-serif;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-weight: bold;
+}
+
+.hljs {
+    font-family: monospace;
+    line-height: 1.3em;
+}
+
+img.userpic {
+    width: 160px;
+    height: 160px;
+    border: 1px solid #eee;
+    border-radius: 1000px 1000px 1000px 1000px;
+    margin: 10px;
+}
+
+div.social i {
+    font-size: 2.5rem;
+}
+
+.social {
+    color: #aaa;
+}
+
+.social.fblogin.loaded {
+    color: #3b5998;
+    cursor: pointer;
+}
+
+.social.googlelogin.loaded {
+    color: #dd4b39;
+    cursor: pointer;
+}
+
+.social.githublogin.loaded {
+    color: #000;
+    cursor: pointer;
+}
+
+.social.linkedinlogin.loaded {
+    color: #3b59aa;
+    cursor: pointer;
+}
+
+.withmargin {
+    margin: 15px;
+}
+
+#messageContainer {
+    position: fixed;
+    top: 40px;
+    right: 10px;  
+    width: 300px;
+    z-index: 10000000;
+}
+
+.alert-box {
+    border: 1px solid;
+    border-left: 25px solid;
+    color: #666;
+    background-color: #fff;
+    box-shadow: 0 0 4px 0 #333;
+}
+
+.alert-box.success, .alert-box.warning, .alert-box.info, .alert-box.alert {
+    color: #666;
+    background-color: #fff;
+}
+
+div.alert-box.no-shadow {
+    box-shadow: none;
+}
+
+.withnomargin, .nomargin {
+    margin: 0;
+}
+
+div.nopadding {
+    padding: 0;
+}
+
+div.noline {
+    line-height: 0.5;
+}
+
+div.infoicon {
+    text-align: center;
+    font-size: 3rem;
+    background-color: #333332;
+    color: #eee;
+    margin: 0 auto;
+    width: 5.3rem;
+    height: 5.3rem;
+    border-radius: 1000px 1000px 1000px 1000px;
+    margin-bottom: 15px;
+}
+
+div.infoicons {
+    text-align: center;
+    font-size: 4.5rem;
+    color: #888;
+    margin-bottom: 15px;
+    border-bottom: 1px solid #ddd;
+}
+
+div.infoicons.big {
+    font-size: 7rem;
+    padding: 0;
+    margin: 0;
+    border: 0;
+    line-height: 0.6rem;
+}
+
+img.icon {
+    height: 4.7rem;
+    margin-top: -10px;
+    opacity: 0.5;
+    padding: 8px;
+}
+
+div.comment {
+    padding-top: 15px;
+}
+
+.comment_pic {
+    border: 1px solid #ccc;
+    height: 40px;
+    width: 40px;
+    border-radius: 1000px 1000px 1000px 1000px;
+}
+
+.comment_body {
+    padding-top: 10px;
+    margin-top: 5px;
+    border-top: 1px dashed #ddd;
+}
+
+.comment_body pre {
+
+}

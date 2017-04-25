@@ -1,0 +1,22 @@
+{
+  "name": "phresto",
+  "homepage": "https://github.com/amarczuk/phresto-lib",
+  "authors": [
+    "adam <adam@marczuk.info>"
+  ],
+  "description": "",
+  "main": "",
+  "license": "MIT",
+  "private": true,
+  "dependencies": {
+    "jquery": "^3.2.0",
+    "angular": "^1.6.3",
+    "ace": "^1.2.6",
+    "ckeditor": "^4.6.2",
+    "foundation-icons": "*",
+    "bluebird": "^3.5.0",
+    "foundation-sites": "^6.3.1",
+    "angular-foundation-6": "^0.11.5",
+    "angular-touch": "^1.6.3"
+  }
+}

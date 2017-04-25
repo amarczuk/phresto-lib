@@ -1,0 +1,14 @@
+{
+  "name": "phresto/phresto",
+  "description": "Simple PHP REST framework",
+  "license": "MIT",
+  "autoload": {
+    "psr-4" : {
+      "Phresto" : "src/"
+    }
+  },
+  "bin": ["bin/*"],
+  "require" : {
+    "lusitanian/oauth": "*"
+  }
+}

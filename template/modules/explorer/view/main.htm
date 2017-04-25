@@ -1,0 +1,75 @@
+<div ng-controller="explorerAppController">
+	<div class="row">
+		<div class="small-12 columns">
+			<h1>Explorer</h1>
+		</div>
+	</div>
+
+	<div class="row">
+		<div class="small-12 columns">
+			<h4>REST endpoints</h4>
+		</div>
+	</div>
+
+	<div class="row">
+		<accordion close-others="false">
+			<accordion-group heading="/{{controller.endpoint}}" ng-repeat="controller in routes | orderBy:'endpoint'">
+				<ul class="tabs" data-tabs id="{{controller.endpoint | idfy}}-tabs">
+				  <li class="tabs-title" ng-repeat="method in controller.methods">
+				  	<a href="#{{controller.endpoint | idfy}}-panel-{{method.name}}">{{method.name}}</a>
+				  </li>
+				</ul>
+				<div class="tabs-content" data-tabs-content="{{controller.endpoint | idfy}}-tabs">
+					<div class="tabs-panel" id="{{controller.endpoint | idfy}}-panel-{{method.name}}" ng-repeat="method in controller.methods">
+						<div class="row" ng-if="method.description">
+							<div class="small-12 columns">
+								<pre>{{method.description}}</pre>
+							</div>
+						</div>
+						<div class="row">
+							<div class="small-12 columns">
+								<fieldset class="fieldset">
+	  								<legend>url</legend>
+									<b>/{{controller.endpointOrg}}</b>
+									<span ng-if="controller.endpointRelated">
+										/ <input type="text" ng-model="method.url_id" placeholder="id" class="small" style="display: inline-block; width: auto; font-size: 14px; height: 24px;">
+									</span> 
+									<b ng-if="controller.endpointRelated">/{{controller.endpointRelated}}</b>
+									<span ng-repeat="param in method.urlparams">
+										/ <input type="text" ng-model="method.url[$index]" placeholder="{{param}}" class="small" style="display: inline-block; width: auto; font-size: 14px; height: 24px;">
+									</span> 
+									? <input type="text" ng-model="method.query" placeholder="limit=XX&offset=XX&fields[]=field1&fields[]=field2..." class="small" style="display: inline-block; width: 200px; font-size: 14px; height: 24px;">
+								</fieldset>						
+							</div>
+						</div>
+						<div class="row">
+							<div class="small-12 medium-6 columns">
+								<fieldset class="fieldset" ng-if="method.params && method.params.length">
+	  								<legend>request parameters</legend>
+
+	  								<label ng-repeat="param in method.params">
+										{{param.name}} ({{param.type ? param.type : 'mixed'}})
+										<textarea ng-model="method.body[param.name]" style="min-height: 28px"></textarea>
+									</label>
+
+								</fieldset>
+								<button class="button" ng-click="makeRequest(controller, method)" ng-disabled="loading">make request</button> 
+							</div>
+							<div class="small-12 medium-6 columns">
+								<fieldset class="fieldset">
+	  								<legend>output<span ng-if="method.responseStatus"> ({{method.responseStatus}})</span></legend>
+	  								<div style="width: 100%; height: 200px; overflow: auto; word-break: break-all;">
+	  									<pre style="white-space: pre-wrap;">{{method.response | prettyJSON}}</pre>
+	  								</div>
+								</fieldset>
+							</div>
+						</div>
+					</div>
+				</div>
+		    </accordion-group>
+		</accordion>
+
+	</div>
+
+	<message/>
+</div>

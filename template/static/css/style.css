@@ -1,0 +1,48 @@
+body {
+    font-family: arial, sans-serif;
+    font-size: 0.9rem;
+    color: #444;
+    line-height: 2;
+    letter-spacing: 0.09em;
+}
+
+div .tabs-content {
+    color: #444;
+}
+
+#messageContainer {
+    position: fixed;
+    top: 40px;
+    right: 10px;  
+    width: 300px;
+    z-index: 10000000;
+}
+
+.alert-box {
+    border: 1px solid;
+    border-left: 25px solid;
+    color: #666;
+    background-color: #fff;
+    box-shadow: 0 0 4px 0 #333;
+}
+
+.alert-box.success, .alert-box.warning, .alert-box.info, .alert-box.alert {
+    color: #666;
+    background-color: #fff;
+}
+
+.alert-box.success {
+    border-color: #28b747;
+}
+
+.alert-box.warning {
+    border-color: #ff8b2d;
+}
+
+.alert-box.info {
+    border-color: #fffc5b;
+}
+
+.alert-box.alert {
+    border-color: #bc0000;
+}
