@@ -42,10 +42,11 @@ function newone() {
 	echo "Create project files...\n";
 
 	copyDir(implode(DIRECTORY_SEPARATOR, [__DIR__ , '..', 'template']), PHRESTO_ROOT );
-	
+	echo "Project files created.\n";
+
 	$db = [];
 	do {
-		echo "Tu set database type db config name. Enter to continue: ";
+		echo "\nTu add database config type db config name or leave empty to continue: ";
 		$answer = getLine();
 		if (!empty($answer)) {
 			$db = [$answer => []];
@@ -76,16 +77,6 @@ function newone() {
 	passthru('bower install');
 
 	echo "Done\n";
-}
-
-function getLine() {
-	if (PHP_OS == 'WINNT') {
-	  $line = stream_get_line(STDIN, 1024, PHP_EOL);
-	} else {
-	  $line = readline();
-	}
-
-	return $line;
 }
 
 function updatemodulesini() {
@@ -135,4 +126,14 @@ function copyDir($source, $dest) {
 			@copy($item, $dest . DIRECTORY_SEPARATOR . $iterator->getSubPathName());
 		}
 	}
+}
+
+function getLine() {
+	if (PHP_OS == 'WINNT') {
+	  $line = stream_get_line(STDIN, 1024, PHP_EOL);
+	} else {
+	  $line = readline();
+	}
+
+	return $line;
 }
