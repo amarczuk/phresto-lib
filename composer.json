@@ -4,7 +4,7 @@
   "license": "MIT",
   "autoload": {
     "psr-4" : {
-      "Phresto" : "src/"
+      "Phresto\\" : "src/"
     }
   },
   "bin": ["bin/*"],
