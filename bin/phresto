@@ -1,8 +1,13 @@
 <?php
 
-define( 'PHRESTO_ROOT', __DIR__ . '/../../../../' );
+if ( !is_dir( getcwd() . '/vendor' ) ) {
+	echo "\n\nPlease run Phresto CLI from root folder of your project!\n\n";
+	die(1);
+}
 
-require_once __DIR__ . '/../../../autoload.php';
+define( 'PHRESTO_ROOT', getcwd() );
+
+require_once getcwd() . '/vendor/autoload.php';
 
 $functions = [
 	'--updatemodulesiniulesini' => [ 'func' => 'updatemodules', 'desc' => 'Updates/creates conf/modules.ini' ],
@@ -33,16 +38,24 @@ function updatemodulesini() {
 }
 
 function help() {
+	global $functions;
+
 	echo <<<END
    _o   ___  ___       ___  ___  __  ____  ____
  _//___/ o/ /__/ /__/ /__/ /__  /_    /   /   /
 /_____/__/ /    /  / / \  /__  __/   /   /___/
 _O_____O____________________________________
-END;
+                                 Phresto CLI
 
-	echo "\nPhresto cli\n\n";
+Usage: vendor\bin\phresto [options]
+
+Available options:
+
+END;
 
 	foreach ($functions as $key => $value) {
 		echo "{$key} - {$value['desc']}\n";
 	}
+
+	echo "\n";
 }
