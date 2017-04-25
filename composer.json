@@ -7,7 +7,7 @@
       "Phresto\\" : "src/"
     }
   },
-  "bin": ["bin/phresto.php"],
+  "bin": ["bin/phresto"],
   "require" : {
     "lusitanian/oauth": "*"
   }
