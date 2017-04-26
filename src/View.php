@@ -32,6 +32,14 @@ class View {
     	return [ 'body' => json_encode( $response, JSON_PRETTY_PRINT ), 'content-type' => 'application/json' ];
     }
 
+    public static function setMainLanguage() {
+    	$config = Config::getConfig( 'view' );
+    	self::$lang = $this->config['page']['lang'];
+    	if ( is_file( 'lang/errors_' . self::$lang . '.php' ) ) {
+    		require_once( 'lang/errors_' . self::$lang . '.php' );
+    	}
+    }
+
 	public static function getView( $name, $module = null ) {
 		if ( isset( self::$instances[$name] ) ) return self::$instances[$name];
 		self::$instances[$name] = new View( $module );
@@ -60,9 +68,13 @@ class View {
 		if ( $data == '' && $template == 'inline' ) return false;
 
 		if ( !empty( $module ) ) {
-			require_once( 'modules/' . $module . '/lang/' . self::$lang . '.php' );
+			if ( is_file( 'modules/' . $module . '/lang/' . self::$lang . '.php' ) ) {
+				require_once( 'modules/' . $module . '/lang/' . self::$lang . '.php' );
+			}
 		} else {
-			require_once( 'lang/' . self::$lang . '.php' );
+			if ( is_file( 'lang/' . self::$lang . '.php' ) ) {
+				require_once( 'lang/' . self::$lang . '.php' );
+			}
 		}
 		
 		if ( $template == 'inline' ) {

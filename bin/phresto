@@ -38,6 +38,12 @@ function update() {
 }
 
 function newone() {
+
+	if (is_file(implode(DIRECTORY_SEPARATOR, [PHRESTO_ROOT , 'conf', 'app.ini'])) {
+		echo "Sorry, current folder already contains Phresto project.\n";
+		return;
+	}
+
 	echo "Setting up new project...\n";
 	echo "Create project files...\n";
 

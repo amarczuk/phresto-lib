@@ -8,6 +8,7 @@ ob_start();
 require_once 'vendor/autoload.php';
 
 Phresto\Utils::registerAutoload();
+Phresto\View::setMainLanguage();
 
 $response = '';
 
