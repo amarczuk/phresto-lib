@@ -7,7 +7,7 @@ if ( !is_dir( getcwd() . DIRECTORY_SEPARATOR . 'vendor' ) ) {
 
 define( 'PHRESTO_ROOT', getcwd() );
 
-require_once implode(DIRECTORY_SEPARATOR, [getcwd(), 'vendor', 'autoload.php']);
+require_once getPath([getcwd(), 'vendor', 'autoload.php']);
 
 $functions = [
 	'--new/-n' => [ 'func' => 'newone', 'desc' => 'Creates empty Phresto project with built-in modules' ],
@@ -21,7 +21,7 @@ $run = 0;
 foreach ($functions as $key => $value) {
 	$keys = explode('/', $key);
 	if (in_array($keys[0], $argv) || in_array($keys[1], $argv)) {
-		$value['func']();
+		$value['func'](in_array($keys[0], $argv) ? $keys[0] : $keys[1]);
 		$run++;
 	}
 }
@@ -29,17 +29,53 @@ if ($run == 0) {
 	help();
 };
 
-function install() {
+function install($key) {
+	$pos = array_search($key, $argv) + 1;
+	if (empty($argv[$pos]) || mb_strpos('/', $argv[$pos]) === false) {
+		echo "Wrong module name.\n";
+		return;
+	}
+	$module = $argv[$pos];
+	if (is_dir(getPath([PHRESTO_ROOT, 'vendor', $module]))) {
+		echo "Module is already installed. Please use option -u instead.\n";
+		return;
+	}
+	echo "Installing module {$module}...\n";
+	passthru("composer install {$module}");
+	if (!is_dir(getPath([PHRESTO_ROOT, 'vendor', $module]))) {
+		echo "Module was not installed correctly.\n";
+		return;
+	}
+	copyDir(getPath([PHRESTO_ROOT, 'vendor', $module, 'modules']), getPath(PHRESTO_ROOT, 'modules'));
 	
+	echo "Module {$module} has been installed.\n";
 }
 
-function update() {
-
+function update($key) {
+	$pos = array_search($key, $argv) + 1;
+	if (empty($argv[$pos]) || mb_strpos('/', $argv[$pos]) === false) {
+		echo "Wrong module name.\n";
+		return;
+	}
+	$module = $argv[$pos];
+	if (!is_dir(getPath([PHRESTO_ROOT, 'vendor', $module]))) {
+		echo "Module is not installed. Please use option -i instead.\n";
+		return;
+	}
+	echo "Updating module {$module}...\n";
+	passthru("composer update {$module}");
+	if (!is_dir(getPath([PHRESTO_ROOT, 'vendor', $module]))) {
+		echo "Module was not installed correctly.\n";
+		return;
+	}
+	copyDir(getPath([PHRESTO_ROOT, 'vendor', $module, 'modules']), getPath(PHRESTO_ROOT, 'modules'));
+	
+	echo "Module {$module} has been updated.\n";
 }
 
-function newone() {
+function newone($key) {
 
-	if (is_file(implode(DIRECTORY_SEPARATOR, [PHRESTO_ROOT , 'conf', 'app.ini'])) {
+	if (is_file(getPath([PHRESTO_ROOT , 'conf', 'app.ini']))) {
 		echo "Sorry, current folder already contains Phresto project.\n";
 		return;
 	}
@@ -47,7 +83,7 @@ function newone() {
 	echo "Setting up new project...\n";
 	echo "Create project files...\n";
 
-	copyDir(implode(DIRECTORY_SEPARATOR, [__DIR__ , '..', 'template']), PHRESTO_ROOT );
+	copyDir(getPath([__DIR__ , '..', 'template']), PHRESTO_ROOT );
 	echo "Project files created.\n";
 
 	$db = [];
@@ -94,10 +130,10 @@ function updatemodulesini() {
 	echo "Done\n";
 }
 
-function help() {
+function help($key) {
 	global $functions;
 
-	$usage = 'vendor' . DIRECTORY_SEPARATOR . 'bin' . DIRECTORY_SEPARATOR . 'phresto';
+	$usage = getPath(['vendor', 'bin', 'phresto']);
 
 	echo <<<END
    _o   ___  ___       ___  ___  __  ____  ____
@@ -142,4 +178,8 @@ function getLine() {
 	}
 
 	return $line;
+}
+
+function getPath(array $folders) {
+	return implode(DIRECTORY_SEPARATOR, $folders);
 }

@@ -49,7 +49,7 @@ class user extends MySQLModel {
     }
 
     protected function filterJson( $fields ) {
-    	$fields['password'] = '* * *';
+    	$fields['password'] = '*';
         $fields['image'] = $this->image;
     	return $fields;
     }
@@ -75,7 +75,6 @@ class user extends MySQLModel {
     }
 
     public static function socialLogin( $userDetails ) {
-        var_dump($userDetails);
         $user = new user( [ 'where' => [ 'email' => $userDetails['email'] ] ] );
         
         if ( empty( $user->getIndex() ) ) {
@@ -88,6 +87,16 @@ class user extends MySQLModel {
         $user->save();
 
         return static::getToken( $user );
+    }
+
+    public static function loginWithToken( $t ) {
+        $t = str_replace( 'Bearer ', '', $t );
+        $token = new token( ['where' => ['token' => $t] ] );
+        if ( empty( $token->getIndex() ) ) {
+            throw new \Exception( 'Token not found', 401 );
+        }
+        $users = static::findRelated( $token );
+        return $users[0];
     }
 
     protected static function getToken( Model $user ) {
