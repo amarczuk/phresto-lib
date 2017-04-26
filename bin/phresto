@@ -75,7 +75,7 @@ function update($key) {
 
 function newone($key) {
 
-	if (is_file(getPath([PHRESTO_ROOT , 'conf', 'app.ini']))) {
+	if (is_file(getPath([PHRESTO_ROOT , 'config', 'app.ini']))) {
 		echo "Sorry, current folder already contains Phresto project.\n";
 		return;
 	}
