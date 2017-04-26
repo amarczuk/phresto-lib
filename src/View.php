@@ -34,7 +34,7 @@ class View {
 
     public static function setMainLanguage() {
     	$config = Config::getConfig( 'view' );
-    	self::$lang = $this->config['page']['lang'];
+    	self::$lang = $config['page']['lang'];
     	if ( is_file( 'lang/errors_' . self::$lang . '.php' ) ) {
     		require_once( 'lang/errors_' . self::$lang . '.php' );
     	}
