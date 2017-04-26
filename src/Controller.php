@@ -178,7 +178,7 @@ class Controller {
 			$params = static::getParameters( $method, $className );
 			$ignore = [];
 
-			$routeMapping = ( isset( $fields[$method->name] ) && is_array( $fields[$method->name] ) ) ? $fields[$method->name] : ( isset( $fields['all'] ) && is_array( $fields['all'] ) ) ? $fields['all'] : [];
+			$routeMapping = ( !empty( $fields[$method->name] ) && is_array( $fields[$method->name] ) ) ? $fields[$method->name] : ( !empty( $fields['all'] ) && is_array( $fields['all'] ) ) ? $fields['all'] : [];
 			
 			if ( !empty( $routeMapping ) ) {
 				$values = array_values( $routeMapping );

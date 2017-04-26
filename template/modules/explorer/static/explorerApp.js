@@ -37,6 +37,8 @@ angular.module('app', ['mm.foundation']).controller(
       phresto.get('explorer/routes')
         .then(function(routes) {
           for (var route in routes) {
+            if (routes[route]['_debug_']) continue;
+            
             if (routes[route].endpoint.search('/_id_/') > -1) {
               var parts = routes[route].endpoint.split('/_id_/');
               routes[route].endpointOrg = parts[0];
