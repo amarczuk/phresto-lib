@@ -39,7 +39,7 @@ class token extends MySQLModel {
     }
 
     protected function saveFilter() {
-        if ( $this->_new ) $this->token = uniqid();
+        if ( $this->_new ) $this->token = str_replace( '.', '', uniqid( '',true ) );
     }
 
     protected function filterJson( $fields ) {
