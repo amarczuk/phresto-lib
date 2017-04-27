@@ -196,7 +196,7 @@ function copyDir($source, $dest, $skip = []) {
 		$destItem = getPath([$dest, $iterator->getSubPathName()]);
 		foreach ($skip as $value) {
 			if (mb_strpos($item, $value) !== false && 
-				file_exists($destItem) continue 2;
+				file_exists($destItem)) continue 2;
 		}
 
 		if ( $item->isDir() ) {
