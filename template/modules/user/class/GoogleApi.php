@@ -18,7 +18,7 @@ class GoogleApi {
     protected $googleService;
 
     public function __construct( $key, $secret ) {
-        $url = $_SERVER["HTTP_HOST"] . '/user/google';
+        $url = $_SERVER["HTTP_HOST"] . '/user/auth/google';
         if (  !empty( $_SERVER["HTTPS"] ) && $_SERVER["HTTPS"] == 'on' ) {
             $url = 'https://' . $url;
         } else {

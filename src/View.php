@@ -94,6 +94,12 @@ class View {
 			if ( !is_file( $path . $template . '.htm' ) ) return false;
 		}
 		
+		foreach ($data as $key => $value) {
+			if ( is_array( $value ) || is_object( $value ) ) {
+				$data[$key] = json_encode( $value );
+			}
+		}
+		
 		array_push( $this->elements, [ 'file' => $path . $template . '.htm', 'data' => $data, 'path' => $path ] );
 		
 		return true;

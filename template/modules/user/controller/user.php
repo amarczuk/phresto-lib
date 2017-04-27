@@ -38,7 +38,7 @@ class user extends CustomModelController {
 				$_SESSION['ret'] = $this->query['ret'];
 			}
 
-			$conf = $Config->getConfig( 'social', 'user' );
+			$conf = Config::getConfig( 'social', 'user' );
 			switch ( $service ) {
 				case 'google':
 					$oauth = new GoogleApi( $conf['google']['key'], $conf['google']['secret'] );

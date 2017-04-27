@@ -18,7 +18,7 @@ class GithubApi {
     protected $githubService;
 
     public function __construct( $key, $secret ) {
-        $url = $_SERVER["HTTP_HOST"] . '/user/github';
+        $url = $_SERVER["HTTP_HOST"] . '/user/auth/github';
         if (  !empty( $_SERVER["HTTPS"] ) && $_SERVER["HTTPS"] == 'on' ) {
             $url = 'https://' . $url;
         } else {

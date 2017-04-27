@@ -17,7 +17,7 @@ class FBApi {
     protected $fbService;
 
     public function __construct( $key, $secret ) {
-        $url = $_SERVER["HTTP_HOST"] . '/user/facebook';
+        $url = $_SERVER["HTTP_HOST"] . '/user/auth/facebook';
         if ( !empty( $_SERVER["HTTPS"] ) && $_SERVER["HTTPS"] == 'on' ) {
             $url = 'https://' . $url;
         } else {

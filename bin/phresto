@@ -11,6 +11,7 @@ require_once getPath([getcwd(), 'vendor', 'autoload.php']);
 
 $functions = [
 	'--new/-n' => [ 'func' => 'newone', 'desc' => 'Creates empty Phresto project with built-in modules' ],
+	'--upgrade/-up' => [ 'func' => 'upgrade', 'desc' => 'Updates Phresto project and built-in modules (preserves configs)' ],
 	'--install/-i [name]' => [ 'func' => 'install', 'desc' => 'Install module (composer package name required)' ],
 	'--update/-u [name]' => [ 'func' => 'update', 'desc' => 'Update module (composer package name required)' ],
 	'--modules/-m' => [ 'func' => 'updatemodulesini', 'desc' => 'Updates/creates conf/modules.ini' ],
@@ -68,7 +69,11 @@ function update($key) {
 		echo "Module was not installed correctly.\n";
 		return;
 	}
-	copyDir(getPath([PHRESTO_ROOT, 'vendor', $module, 'modules']), getPath(PHRESTO_ROOT, 'modules'));
+	copyDir(
+		getPath([PHRESTO_ROOT, 'vendor', $module, 'modules']), 
+		getPath(PHRESTO_ROOT, 'modules'),
+		['.ini' . DIRECTORY_SEPARATOR]
+	);
 	
 	echo "Module {$module} has been updated.\n";
 }
@@ -76,7 +81,7 @@ function update($key) {
 function newone($key) {
 
 	if (is_file(getPath([PHRESTO_ROOT , 'config', 'app.ini']))) {
-		echo "Sorry, current folder already contains Phresto project.\n";
+		echo "Sorry, current folder already contains Phresto project. Use -up instead.\n";
 		return;
 	}
 
@@ -121,6 +126,31 @@ function newone($key) {
 	echo "Done\n";
 }
 
+function upgrade($key) {
+
+	if (!is_file(getPath([PHRESTO_ROOT , 'config', 'app.ini']))) {
+		echo "Sorry, there is no Phresto project in this folder. Use -n instead.\n";
+		return;
+	}
+
+	echo "Updating Phresto lib...\n";
+	passthru("composer update phresto/phresto");
+	echo "Update project files...\n";
+
+	copyDir(getPath([__DIR__ , '..', 'template']), PHRESTO_ROOT, [
+			'.ini' . DIRECTORY_SEPARATOR,
+			DIRECTORY_SEPARATOR . 'lang' . DIRECTORY_SEPARATOR,
+			DIRECTORY_SEPARATOR . 'temp' . DIRECTORY_SEPARATOR,
+			'.htaccess'
+		] );
+	echo "Project files updated.\n";
+
+	echo "Install bower dependencies...\n";
+	passthru('bower install');
+
+	echo "Done\n";
+}
+
 function updatemodulesini() {
 	echo "Updating modules.ini...\n";
 
@@ -156,16 +186,23 @@ END;
 	echo "\n";
 }
 
-function copyDir($source, $dest) {
+function copyDir($source, $dest, $skip = []) {
 	foreach (
 		$iterator = new \RecursiveIteratorIterator(
 		  new \RecursiveDirectoryIterator($source, \RecursiveDirectoryIterator::SKIP_DOTS),
 		  \RecursiveIteratorIterator::SELF_FIRST) as $item
 	) {
-		if ($item->isDir()) {
-			@mkdir($dest . DIRECTORY_SEPARATOR . $iterator->getSubPathName());
+
+		$destItem = getPath([$dest, $iterator->getSubPathName()]);
+		foreach ($skip as $value) {
+			if (mb_strpos($item, $value) !== false && 
+				file_exists($destItem) continue 2;
+		}
+
+		if ( $item->isDir() ) {
+			@mkdir($destItem);
 		} else {
-			@copy($item, $dest . DIRECTORY_SEPARATOR . $iterator->getSubPathName());
+			@copy($item, $destItem);
 		}
 	}
 }

@@ -18,7 +18,7 @@ class LinkedinApi {
     protected $aService;
 
     public function __construct( $key, $secret ) {
-        $url = $_SERVER["HTTP_HOST"] . '/user/linkedin';
+        $url = $_SERVER["HTTP_HOST"] . '/user/auth/linkedin';
         if ( !empty( $_SERVER["HTTPS"] ) && $_SERVER["HTTPS"] == 'on' ) {
             $url = 'https://' . $url;
         } else {
