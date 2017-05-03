@@ -17,12 +17,13 @@ class user extends CustomModelController {
 
 	const CLASSNAME = __CLASS__;
 	const MODELCLASS = 'Phresto\\Modules\\Model\\user';
-	protected $routeMapping = [ 'auth_get' => [ 'service' => 0 ] ];
+	protected $routeMapping = [ 'auth_get' => [ 'service' => 0 ], 'all' => [ 'id' => 0 ] ];
 
 	public function authenticate_post( string $email, string $password ) {
 		$token = User::login( $email, $password );
 
-		return View::jsonResponse( [ 'token' => $token->token, 'expires' => $token->expires ] );
+		$ua = ( !empty( $this->headers['User-Agent'] ) ) ? $this->headers['User-Agent'] : '';
+		return View::jsonResponse( [ 'token' => $token->encrypt( $ua ), 'expires' => $token->expires ] );
 	}
 
 	/** 
@@ -61,13 +62,11 @@ class user extends CustomModelController {
 			$token = $user::socialLogin( $oauth->getUserDetails() );
 			$view = View::getView( 'oauth', 'user' );
 			$view->add( 'oauthSuccess', 
-						[ 
-							'token' => $token->token, 
-							'expires' => $token->expires->format( \DateTime::ISO8601 ), 
-							'ret' => ( !empty( $_SESSION['ret'] ) ? $_SESSION['ret'] : '') 
-						], 
+						['ret' => ( !empty( $_SESSION['ret'] ) ? $_SESSION['ret'] : '')], 
 						'user' );
 			unset( $_SESSION['ret'] );
+			$ua = ( !empty( $this->headers['User-Agent'] ) ) ? $this->headers['User-Agent'] : '';
+			setcookie( 'prsid', $token->encrypt( $ua ), 0, '/', $this->headers['Host'] );
 			return $view->get();
 			
 		} catch( \Exception $e ) {

@@ -15,7 +15,7 @@ class Router {
         unset( $query['PHRESTOREQUESTPATH'] );
         $bodyRaw = '';
         $body = [];
-        $headers = [];
+        $headers = static::getRequestHeaders();
 
 		if ( $reqType != 'get' && $reqType != 'delete' ) {
 	        $bodyRaw = @file_get_contents('php://input');
@@ -57,6 +57,18 @@ class Router {
 		}
 
 	    return $instance->exec();
+	}
+
+	protected static function getRequestHeaders() {
+	    $headers = array();
+	    foreach( $_SERVER as $key => $value ) {
+	        if ( substr( $key, 0, 5 ) != 'HTTP_' ) {
+	            continue;
+	        }
+	        $header = str_replace( ' ', '-', ucwords( str_replace( '_', ' ', strtolower( substr( $key, 5 ) ) ) ) );
+	        $headers[$header] = $value;
+	    }
+	    return $headers;
 	}
 
 	public static function routeException( $ex = 500, $message = '', $trace = '' ) {

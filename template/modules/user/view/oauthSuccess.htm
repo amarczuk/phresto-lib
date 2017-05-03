@@ -1,2 +1,8 @@
-<p>Token: <b>{? $token ?}</b></p>
-<p>Expires: <b>{? $expires ?}</b></p>
+<script>
+if (opener) {
+	opener.location.href = "{? $ret ?}";
+	window.close();
+} else {
+	window.location.href = "{? $ret ?}";
+}
+</script>

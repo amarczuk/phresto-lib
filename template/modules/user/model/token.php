@@ -2,6 +2,7 @@
 
 namespace Phresto\Modules\Model;
 use Phresto\MySQLModel;
+use Phresto\Config;
 
 class token extends MySQLModel {
 	const CLASSNAME = __CLASS__;
@@ -46,6 +47,24 @@ class token extends MySQLModel {
         $fields['token'] = '*********';
         $fields['expires'] = $this->expires;
     	return $fields;
+    }
+
+    public function encrypt( $userAgent ) {
+        $conf = Config::getConfig( 'app' );
+        return openssl_encrypt( 
+            md5( $userAgent ) . '_' . $this->token,
+            'aes-256-ctr',
+            $conf['tokenEncryptionPass']
+        );
+    }
+
+    public static function decrypt( $token ) {
+        $conf = Config::getConfig( 'app' );
+        return openssl_decrypt( 
+            $token,
+            'aes-256-ctr',
+            $conf['tokenEncryptionPass']
+        );
     }
 
 }
