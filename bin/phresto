@@ -27,7 +27,7 @@ foreach ($functions as $key => $value) {
 	}
 }
 if ($run == 0) {
-	help();
+	help('');
 };
 
 function install($key) {
