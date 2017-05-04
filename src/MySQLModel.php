@@ -58,32 +58,54 @@ class MySQLModel extends Model {
         return $sql;
     }
 
-    public static function find( $query = null ) {
-    	$db = MySQLConnector::getInstance( static::DB );
+    protected static function getQueryFields( $query, $prefix = '' ) {
+        $fields = "{$prefix}*";
 
-    	list( $conds, $binds ) = static::getConds( $query );
+        if ( !empty( $query['fields'] ) && is_string( $query['fields'] ) ) {
+            $query['fields'] = explode( ',', str_replace( ' ', '', $query['fields'] ) );
+        }
 
-        $fields = '*';
-        if ( isset( $query['fields'] ) && is_array( $query['fields'] ) ) {
+        if ( !empty( $query['fields'] ) && is_array( $query['fields'] ) ) {
             if ( !in_array( static::INDEX, $query['fields'] ) ) {
                 array_unshift( $query['fields'], static::INDEX );
             }
-            $fields = implode( ', ', $query['fields'] );
+
+            $queryfields = [];
+
+            foreach ( $query['fields'] as $value) {
+                $value = trim( $value );
+                if ( array_key_exists( $value, static::$_fields ) ) {
+                    $queryfields[] = $value;
+                }
+            }
+
+            if ( !empty( $queryfields ) ) {
+                $fields = "`{$prefix}" . implode( "`, `{$prefix}", $queryfields ) . '`';
+            }
         }
 
-    	$sql = "SELECT {$fields} FROM " . static::COLLECTION . " WHERE " . implode( ' AND ', $conds );
-    	
+        return $fields;
+    }
+
+    public static function find( $query = null ) {
+        $db = MySQLConnector::getInstance( static::DB );
+
+        list( $conds, $binds ) = static::getConds( $query );
+
+        $fields = static::getQueryFields( $query );
+
+        $sql = "SELECT {$fields} FROM " . static::COLLECTION . " WHERE " . implode( ' AND ', $conds );
         $sql .= static::extendQuery( $query );
 
-    	$result = $db->query( $sql, $binds );
+        $result = $db->query( $sql, $binds );
 
         $modelClass = static::CLASSNAME;
         $res = [];
-    	while ( $row = $db->getNext( $result ) ) {
-    		$res[] = Container::$modelClass($row);
-    	}
+        while ( $row = $db->getNext( $result ) ) {
+            $res[] = Container::$modelClass($row);
+        }
 
-    	return $res;
+        return $res;
     }
 
     public static function findRelated( Model $model, $query = null ) {
@@ -95,13 +117,7 @@ class MySQLModel extends Model {
         $relation = static::getRelation( $model->getName() );
         list( $conds, $binds ) = static::getConds( $query, 'm.' );
 
-        $fields = 'm.*';
-        if ( !empty( $query['fields'] ) && is_array( $query['fields'] ) ) {
-            if ( !in_array( static::INDEX, $query['fields'] ) ) {
-                array_unshift( $query['fields'], static::INDEX );
-            }
-            $fields = 'm.' . implode( ', m.', $query['fields'] );
-        }
+        $fields = static::getQueryFields( $query, 'm.' );
 
         switch ( $relation['type'] ) {
             case '1:1':
@@ -132,32 +148,32 @@ class MySQLModel extends Model {
     }
 
     protected function saveRecord() {
-    	$db = MySQLConnector::getInstance( static::DB );
+        $db = MySQLConnector::getInstance( static::DB );
 
-    	if ( !$this->_new ) {
+        if ( !$this->_new ) {
             $fields = [];
             foreach ( $this->_properties as $key => $value) {
                 $fields[] = '`' . $key . '` = :' . $key;
             }
-    		$sql = "UPDATE " . static::COLLECTION . " SET " . implode( ', ', $fields );
-    		$sql .= " WHERE " . static::INDEX . " = :" . static::INDEX . " LIMIT 1";
-    	} else {
-    		$sql = "INSERT INTO " . static::COLLECTION . " ( `" . implode( '`, `', static::getFields() ) . "` ) ";
-    		$sql .= "VALUES ( " . implode( ', :', static::getFields() ) . " )";
-    	}
+            $sql = "UPDATE " . static::COLLECTION . " SET " . implode( ', ', $fields );
+            $sql .= " WHERE " . static::INDEX . " = :" . static::INDEX . " LIMIT 1";
+        } else {
+            $sql = "INSERT INTO " . static::COLLECTION . " ( `" . implode( '`, `', static::getFields() ) . "` ) ";
+            $sql .= "VALUES ( " . implode( ', :', static::getFields() ) . " )";
+        }
 
-    	$db->query( $sql, $this->_properties );
+        $db->query( $sql, $this->_properties );
 
-    	if ( $this->_new ) {
-    		$this->_new = false;
-    		$this->setById( $db->getLastId() );
-    	}
+        if ( $this->_new ) {
+            $this->_new = false;
+            $this->setById( $db->getLastId() );
+        }
 
-    	return true;
+        return true;
     }
 
     protected function deleteRecord() {
-    	$db = MySQLConnector::getInstance( self::DB );
+        $db = MySQLConnector::getInstance( self::DB );
 
         $sql = "delete from " . static::COLLECTION . " where " . static::INDEX . " = :index limit 1";
         $bind = [ 'index' => $this->_properties[static::INDEX] ];

@@ -6,7 +6,7 @@ use Phresto\Model;
 use Phresto\Modules\Model\token;
 
 class user extends MySQLModel {
-	const CLASSNAME = __CLASS__;
+    const CLASSNAME = __CLASS__;
 
     const DB = 'mysql';
     const NAME = 'user';
@@ -49,9 +49,9 @@ class user extends MySQLModel {
     }
 
     protected function filterJson( $fields ) {
-    	$fields['password'] = '*';
-        $fields['image'] = $this->image;
-    	return $fields;
+        if ( isset( $fields['password'] ) ) $fields['password'] = '*';
+        if ( isset( $fields['email_md5'] ) ) $fields['image'] = $this->image;
+        return $fields;
     }
 
     protected static function passHash( $password ) {
