@@ -66,7 +66,7 @@ class user extends CustomModelController {
 						'user' );
 			unset( $_SESSION['ret'] );
 			$ua = ( !empty( $this->headers['User-Agent'] ) ) ? $this->headers['User-Agent'] : '';
-			setcookie( 'prsid', $token->encrypt( $ua ), 0, '/', $this->headers['Host'] );
+			setcookie( 'prsid', $token->encrypt( $ua ), 0, '/' );
 			return $view->get();
 			
 		} catch( \Exception $e ) {

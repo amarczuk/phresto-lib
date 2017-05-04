@@ -58,13 +58,19 @@ class token extends MySQLModel {
         );
     }
 
-    public static function decrypt( $token ) {
+    public static function decrypt( $token, $userAgent ) {
         $conf = Config::getConfig( 'app' );
-        return openssl_decrypt( 
+        list($ua, $token) = explode( '_', openssl_decrypt( 
             $token,
             'aes-256-ctr',
             $conf['tokenEncryptionPass']
-        );
+        ));
+
+        if ( md5( $userAgent ) != $ua ) {
+            return false;
+        }
+
+        return new token( [ 'where' => [ 'token' => $token ] ] );
     }
 
 }
