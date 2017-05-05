@@ -15,12 +15,12 @@ class user extends MySQLModel {
 
     protected static $_fields = [ 'id' => 'int', 
                                   'email' => 'string', 
-                                  'email_md5' => 'string', 
                                   'password' => 'string', 
                                   'name' => 'string', 
                                   'status' => 'int', 
                                   'created' => 'DateTime', 
-                                  'last_login' => 'DateTime' 
+                                  'last_login' => 'DateTime',
+                                  'profile' => 'int' 
                                 ];
 
     protected static $_defaults = [ 'status' => 1, 'created' => '' ];
@@ -30,11 +30,17 @@ class user extends MySQLModel {
             'model' => 'token',
             'field' => 'user',
             'index' => 'id'
+        ],
+        'profile' => [
+            'type' => 'n:1',
+            'model' => 'profile',
+            'field' => 'id',
+            'index' => 'profile'
         ]
     ];
 
     protected function image_value() {
-        return '//www.gravatar.com/avatar/' . $this->email_md5 . '?d=retro';
+        return '//www.gravatar.com/avatar/' . md5( $this->email ) . '?d=retro';
     }
 
     protected function saveFilter() {
@@ -50,7 +56,7 @@ class user extends MySQLModel {
 
     protected function filterJson( $fields ) {
         if ( isset( $fields['password'] ) ) $fields['password'] = '*';
-        if ( isset( $fields['email_md5'] ) ) $fields['image'] = $this->image;
+        if ( isset( $fields['email'] ) ) $fields['image'] = $this->image;
         return $fields;
     }
 
