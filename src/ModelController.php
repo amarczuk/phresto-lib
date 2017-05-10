@@ -122,7 +122,7 @@ class ModelController extends Controller {
 		$relatedModels = $staticProps['_relations'];
 		$endpoints = [];
 		foreach ( $relatedModels as $model => $relation ) {
-			$paths = ModelController::discover( "\\Phresto\\Modules\\Model\\{$model}", false );
+			$paths = ModelController::discover( false, "\\Phresto\\Modules\\Model\\{$model}", false );
 			$modelDiscovery = $getModelDisc( $paths, $model );
 			if ( empty( $modelDiscovery ) || empty( $modelDiscovery['methods'] ) ) {
 				continue;
@@ -150,7 +150,7 @@ class ModelController extends Controller {
 	* @return object
 	*/
 	protected function discover_get() {
-		return $this->jsonResponse( static::discover( $this->modelName ) );
+		return $this->jsonResponse( static::discover( false, $this->modelName ) );
 	}
 
 	/**

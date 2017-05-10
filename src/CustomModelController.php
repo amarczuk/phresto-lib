@@ -17,8 +17,8 @@ class CustomModelController extends ModelController {
 		return parent::getParameters( $method, static::MODELCLASS );
 	}
 
-	public static function discover( $className = null, $getRelated = true ) {
-		return parent::discover( static::MODELCLASS, $getRelated );
+	public static function discover( $all = false, $className = null, $getRelated = true ) {
+		return parent::discover( $all, static::MODELCLASS, $getRelated );
 	}
 
 }

@@ -1,0 +1,48 @@
+<div ng-controller="adminAppController">
+	<div class="row">
+		<div class="small-12 columns">
+			<h1>Admin</h1>
+		</div>
+	</div>
+
+	<div class="row">
+		<div class="small-12 columns">
+			<h4>Permissions</h4>
+		</div>
+	</div>
+
+	<div class="row">
+		<div class="small-12 columns">
+			Profile: <select ng-change="loadPermissions()" ng-model="profileId">
+						<option value="{{profile.id}}" ng-repeat="profile in profiles">{{profile.name}}</option>
+					</select>
+		</div>
+	</div>
+
+	<div class="row">
+		<div class="small-12 columns">
+			<table class="hover">
+				<tr>
+					<th>route</th>
+					<th>head</th>
+					<th>get</th>
+					<th>post</th>
+					<th>patch</th>
+					<th>put</th>
+					<th>delete</th>
+				</tr>
+				<tr ng-repeat="perm in permissions | orderBy:'name'">
+					<td>{{perm.name}}</td>
+					<td class='text-center'><input type="checkbox" ng-model="perm.head.allow" ng-click="save(perm.head)" ng-if="perm.head != undefined" ng-disabled="loading"></td>
+					<td class='text-center'><input type="checkbox" ng-model="perm.get.allow" ng-click="save(perm.get)" ng-if="perm.get != undefined"></td>
+					<td class='text-center'><input type="checkbox" ng-model="perm.post.allow" ng-click="save(perm.post)" ng-if="perm.post != undefined"></td>
+					<td class='text-center'><input type="checkbox" ng-model="perm.patch.allow" ng-click="save(perm.patch)" ng-if="perm.patch != undefined"></td>
+					<td class='text-center'><input type="checkbox" ng-model="perm.put.allow" ng-click="save(perm.put)" ng-if="perm.put != undefined"></td>
+					<td class='text-center'><input type="checkbox" ng-model="perm.delete.allow" ng-click="save(perm.delete)" ng-if="perm.delete != undefined"></td>
+				</tr>
+			</table>
+		</div>
+	</div>
+
+	<message/>
+</div>

@@ -8,8 +8,8 @@ class Model implements ModelInterface, \JsonSerializable {
     const CLASSNAME = __CLASS__;
 
     const DB = 'maindb';
-    const NAME = 'model';
-    const INDEX = 'id';
+	const NAME = 'model';
+	const INDEX = 'id';
     const COLLECTION = 'model';
     
     protected $_properties = [];
@@ -32,7 +32,7 @@ class Model implements ModelInterface, \JsonSerializable {
     * if value should be calculated during runtime leave value empty and
     * add protected function `default_field_name()` returning default value
     */
-    protected static $_defaults = [];
+	protected static $_defaults = [];
 
     /**
     * array describes model relations:
@@ -108,11 +108,11 @@ class Model implements ModelInterface, \JsonSerializable {
     }
 
     protected function getEmpty() {
-        $this->_properties = [];
-        foreach( static::$_fields as $field => $type ) {
-            $this->_properties[$field] = '';
-        }
-        $this->_new = true;
+    	$this->_properties = [];
+    	foreach( static::$_fields as $field => $type ) {
+    		$this->_properties[$field] = '';
+    	}
+    	$this->_new = true;
     }
 
     public function setById( $id ) {
@@ -140,12 +140,12 @@ class Model implements ModelInterface, \JsonSerializable {
     }
 
     protected function set( $modelArray ) {
-        $this->_properties = [];
-        foreach( static::$_fields as $field => $type ) {
-            if ( isset( $modelArray[$field] ) ) {
-                $this->$field = $modelArray[$field];
-            }
-        }
+    	$this->_properties = [];
+    	foreach( static::$_fields as $field => $type ) {
+    		if ( isset( $modelArray[$field] ) ) {
+    			$this->$field = $modelArray[$field];
+    		}
+    	}
 
         if ( !empty( $this->_properties[static::INDEX] ) ) $this->_new = false;
     }
@@ -167,7 +167,7 @@ class Model implements ModelInterface, \JsonSerializable {
     }
 
     public static function findRelated( Model $model, $query = null ) {
-        $class = static::CLASSNAME;
+    	$class = static::CLASSNAME;
         return [ new $class() ];
     }
 
@@ -202,7 +202,7 @@ class Model implements ModelInterface, \JsonSerializable {
 
     public function save() {
         $this->saveSetDefaults();
-        $this->saveFilter();
+    	$this->saveFilter();
         $this->saveValidate();
         $this->saveRecord();
         $this->_initial = $this->_properties;
@@ -222,7 +222,7 @@ class Model implements ModelInterface, \JsonSerializable {
     }
 
     public function delete() {
-        $this->deleteValidate();
+    	$this->deleteValidate();
         $this->deleteRecord();
         $this->_properties[static::INDEX] = null;
         $this->_initial = $this->_properties;
@@ -243,9 +243,9 @@ class Model implements ModelInterface, \JsonSerializable {
             return $this->_debug = $value;
         }
 
-        if ( array_key_exists( $name, static::$_fields ) ) {
-            $this->_properties[$name] = $this->getTyped( $name, $value );
-        }
+    	if ( array_key_exists( $name, static::$_fields ) ) {
+    		$this->_properties[$name] = $this->getTyped( $name, $value );
+    	}
     }
 
     public function __get( $name ) {
@@ -254,7 +254,7 @@ class Model implements ModelInterface, \JsonSerializable {
         }
 
         if ( array_key_exists( $name, static::$_fields ) ) {
-           return $this->getTyped( $name );
+    	   return $this->getTyped( $name );
         }
 
         if ( method_exists( $this, "{$name}_value" ) ) {
@@ -265,8 +265,8 @@ class Model implements ModelInterface, \JsonSerializable {
 
     public function __isset( $name ) {
         $debug = ( $name == '_debug_' && !empty( $this->_debug ) );
-        return ( $debug || ( array_key_exists( $name, static::$_fields ) && isset( $this->_properties[$name] ) ) );
-        
+    	return ( $debug || ( array_key_exists( $name, static::$_fields ) && isset( $this->_properties[$name] ) ) );
+    	
     }
 
     protected function filterJson( $fields ) {

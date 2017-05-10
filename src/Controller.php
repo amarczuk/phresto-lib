@@ -141,7 +141,7 @@ class Controller {
 		return [];
 	}
 
-	public static function discover( $className = null, $getRelated = true ) {
+	public static function discover( $all = false, $className = null, $getRelated = true ) {
 
 		$hasParam = function( $params, $field ) {
 			foreach ($params as $param) {
@@ -163,7 +163,9 @@ class Controller {
 		$tmp = explode( '\\', ( isset( $className ) ) ? $className : static::CLASSNAME );
 		$classNameOnly = array_pop( $tmp );
 
-		$classMethods = $reflection->getMethods( \ReflectionMethod::IS_PUBLIC );
+		$methodTypes = ( $all ) ? \ReflectionMethod::IS_PUBLIC | \ReflectionMethod::IS_PROTECTED : \ReflectionMethod::IS_PUBLIC;
+
+		$classMethods = $reflection->getMethods( $methodTypes );
 		$staticProps = $reflection->getDefaultProperties(); 
 		$fields = $staticProps['routeMapping'];
 
