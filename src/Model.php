@@ -51,12 +51,16 @@ class Model implements ModelInterface, \JsonSerializable {
     protected static $_relations = [];
 
     public function __construct( $option = null ) {
-        
         if ( empty( $option ) ) {
             $this->getEmpty();
         } else if ( is_array( $option ) && isset( $option['where'] ) ) {
             $option['limit'] = 1;
-            $this->setObject( self::find( $option )[0] );
+            $result = static::find( $option );
+            if ( !empty( $result ) && !empty( $result[0] ) ) {
+                $this->setObject( $result );
+            } else {
+                $this->getEmpty();
+            }
         } else if ( is_array( $option ) ) {
             $this->set( $option );
         } else if ( is_object( $option ) ) {
@@ -68,10 +72,6 @@ class Model implements ModelInterface, \JsonSerializable {
         }
 
         $this->_initial = $this->_properties;
-    }
-
-    public static function auth( $reqType ) {
-        return true;
     }
 
     public static function getIndexField() {
@@ -141,13 +141,7 @@ class Model implements ModelInterface, \JsonSerializable {
 
     protected function set( $modelArray ) {
     	$this->_properties = [];
-    	foreach( static::$_fields as $field => $type ) {
-    		if ( isset( $modelArray[$field] ) ) {
-    			$this->$field = $modelArray[$field];
-    		}
-    	}
-
-        if ( !empty( $this->_properties[static::INDEX] ) ) $this->_new = false;
+    	$this->update( $modelArray );
     }
 
     protected function setObject( $model ) {
@@ -190,7 +184,7 @@ class Model implements ModelInterface, \JsonSerializable {
     protected function saveSetDefaults() {
         if ( !$this->_new ) return true;
         foreach ( static::$_defaults as $key => $value ) {
-            if ( empty( $this->$key ) ) {
+            if ( empty( $this->_properties[$key] ) ) {
                 if ( empty( $value ) && method_exists( $this, 'default_' . $key ) ) {
                     $this->$key = $this->{'default_' . $key}();
                 } else {

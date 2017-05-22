@@ -9,7 +9,6 @@ interface ModelInterface {
 
 	public static function find( $query );
 	public static function findRelated( Model $model, $query = null );
-	public static function auth( $reqType );
 
 	public function save();
 	public function delete();

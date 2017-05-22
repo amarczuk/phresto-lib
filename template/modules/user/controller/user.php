@@ -20,10 +20,13 @@ class user extends CustomModelController {
 	protected $routeMapping = [ 'auth_get' => [ 'service' => 0 ], 'all' => [ 'id' => 0 ] ];
 
 	public function authenticate_post( string $email, string $password ) {
-		$token = User::login( $email, $password );
+		$user = static::MODELCLASS;
+		$token = $user::login( $email, $password );
 
 		$ua = ( !empty( $this->headers['User-Agent'] ) ) ? $this->headers['User-Agent'] : '';
-		return View::jsonResponse( [ 'token' => $token->encrypt( $ua ), 'expires' => $token->expires ] );
+		$encrypted = $token->encrypt( $ua );
+		setcookie( 'prsid', $encrypted, 0, '/' );
+		return View::jsonResponse( [ 'token' => $encrypted, 'expires' => $token->expires->format( \DateTime::ISO8601 ) ] );
 	}
 
 	/** 

@@ -4,6 +4,7 @@ namespace Phresto;
 use Phresto\Controller;
 use Phresto\View;
 use Phresto\Exception\RequestException;
+use Phresto\Modules\Model\user;
 
 class ModelController extends Controller {
 
@@ -25,6 +26,10 @@ class ModelController extends Controller {
 		list( $method, $args ) = $this->getMethod();
 		$this->methodName = $method->name;
 
+		if ( !$this->auth( $method->name ) ) {
+			throw new Exception\RequestException( LAN_HTTP_UNAUTHORIZED, 401 );
+		}
+
 		if ( $this->hasNextRoute() ) {
 			$route = $this->getNextRoute();
 			return $this->escalate( ( !empty( $this->route[0] ) ) ? $this->route[0] : 0, $route[0] );
@@ -34,14 +39,14 @@ class ModelController extends Controller {
 		return $method->invokeArgs( $this, $args );
 	}
 
-	protected function auth() {
-		$model = $this->modelName;
-		return $model::auth( $this->reqType );
-	}
-
 	protected function hasNextRoute() {
 		$routeMapping = $this->getRouteMapping( $this->methodName );
 		return count( $routeMapping ) < count( $this->route );
+	}
+
+	protected function auth( $methodName ) {
+		$user = user::getCurrent( $this->headers );
+		return $user->hasAccess( $this->modelName, $methodName );
 	}
 
 	protected function getNextRoute() {

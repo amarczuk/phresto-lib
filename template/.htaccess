@@ -7,3 +7,16 @@ RewriteRule ^(.*)/static/(.*)$ $1/static/$2 [QSA,L]
 
 RewriteCond %{REQUEST_URI} ^(.*)$ [NC]
 RewriteRule ^ bootstrap.php?PHRESTOREQUESTPATH=%1 [QSA,L]
+
+# use code below instead of two lines above if your server
+# throws 500 error
+#
+#RewriteCond %{SCRIPT_FILENAME} !-f [OR]
+#RewriteCond %{SCRIPT_FILENAME} !^.*bootstrap.php$ [NC]
+#RewriteCond %{REQUEST_URI} ^(.*)$ [NC]
+#RewriteRule ^ bootstrap.php?PHRESTOREQUESTPATH=%1 [QSA,L]
+#
+#RewriteRule ^.*\.ini$ - [F,L,NC]
+#RewriteRule ^vendor/.*$ - [F,L,NC]
+#RewriteRule ^modules/.*$ - [F,L,NC]
+#RewriteRule ^lang/.*$ - [F,L,NC]

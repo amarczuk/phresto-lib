@@ -25,6 +25,7 @@ class MySQLModel extends Model {
                     $sql = $prefix . $key . ' = :val' . $i;
                     $binds['val' . $i] = $val;
                     $conds[] = $sql;
+                    $i++;
                 }
             }
         }
@@ -89,7 +90,6 @@ class MySQLModel extends Model {
 
     public static function find( $query = null ) {
         $db = MySQLConnector::getInstance( static::DB );
-
         list( $conds, $binds ) = static::getConds( $query );
 
         $fields = static::getQueryFields( $query );
@@ -161,7 +161,6 @@ class MySQLModel extends Model {
             $sql = "INSERT INTO " . static::COLLECTION . " ( `" . implode( '`, `', static::getFields() ) . "` ) ";
             $sql .= "VALUES ( " . implode( ', :', static::getFields() ) . " )";
         }
-
         $db->query( $sql, $this->_properties );
 
         if ( $this->_new ) {

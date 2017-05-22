@@ -2,6 +2,7 @@
 
 namespace Phresto\Modules\Model;
 use Phresto\MySQLModel;
+use Phresto\MySQLConnector;
 use Phresto\Config;
 
 class token extends MySQLModel {
@@ -54,23 +55,41 @@ class token extends MySQLModel {
         return openssl_encrypt( 
             md5( $userAgent ) . '_' . $this->token,
             'aes-256-ctr',
-            $conf['tokenEncryptionPass']
+            $conf['app']['tokenEncryptionPass'],
+            0,
+            'abcdefghijk12345'
         );
     }
 
     public static function decrypt( $token, $userAgent ) {
         $conf = Config::getConfig( 'app' );
-        list($ua, $token) = explode( '_', openssl_decrypt( 
+        $decoded = openssl_decrypt( 
             $token,
             'aes-256-ctr',
-            $conf['tokenEncryptionPass']
-        ));
+            $conf['app']['tokenEncryptionPass'],
+            0,
+            'abcdefghijk12345'
+        );
+
+        if ( strpos( $decoded, '_' ) === false ) {
+            return false;
+        }
+
+        list($ua, $token) = explode( '_', $decoded );
 
         if ( md5( $userAgent ) != $ua ) {
             return false;
         }
 
-        return new token( [ 'where' => [ 'token' => $token ] ] );
+        $result = token::find( [ 'where' => [ 'token' => $token ] ] );
+
+        return (!empty($result[0])) ? $result[0] : false;
+    }
+
+    public static function cleanExpired() {
+        $sql = "DELETE FROM " . static::COLLECTION . " WHERE ADDDATE(`created`, `ttl`) IS NULL OR ADDDATE(`created`, `ttl`) < NOW();";
+        $mysql = MySQLConnector::getInstance( static::DB );
+        $mysql->query( $sql, [] );
     }
 
 }

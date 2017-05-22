@@ -3,6 +3,7 @@
 namespace Phresto;
 
 use Phresto\View;
+use Phresto\Modules\Model\user;
 
 class Controller {
 
@@ -26,9 +27,6 @@ class Controller {
 		$this->query = $query;
 		$this->bodyRaw = $bodyRaw;
 
-		if ( !$this->auth() ) {
-			throw new Exception\RequestException( LAN_HTTP_UNAUTHORIZED, 401 );
-		}
 	}
 
 	protected function getRouteMapping( $reqType ) {
@@ -77,6 +75,11 @@ class Controller {
 
 	public function exec() {
 		list( $method, $args ) = $this->getMethod();
+
+		if ( !$this->auth( $method->name ) ) {
+			throw new Exception\RequestException( LAN_HTTP_UNAUTHORIZED, 401 );
+		}
+
 		$method->setAccessible( true );
 		return $method->invokeArgs( $this, $args );
 	}
@@ -117,8 +120,9 @@ class Controller {
 	    return preg_match('/[>] ([\\\\A-z]+) /', $export, $matches) ? $matches[1] : null;
 	}
 
-	protected function auth() {
-		return true;
+	protected function auth( $methodName ) {
+		$user = user::getCurrent( $this->headers );
+		return $user->hasAccess( static::CLASSNAME, $methodName );
 	}
 
 	protected function jsonResponse( $var ) {

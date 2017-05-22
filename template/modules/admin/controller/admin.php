@@ -2,8 +2,6 @@
 
 namespace Phresto\Modules\Controller;
 use Phresto\Controller;
-use Phresto\ModelController;
-use Phresto\Config;
 use Phresto\View;
 use Phresto\Exception\RequestException;
 use Phresto\Modules\explorer;
@@ -22,7 +20,7 @@ class admin extends Controller {
 
 	/** 
 	* returns admin's UI
-	* @return html
+	* @return string html
 	*/
 	public function get() {
 		$view = View::getView( 'main', 'admin' );
@@ -33,11 +31,12 @@ class admin extends Controller {
 
 	/** 
 	* returns set of permissions for available routes and profile
-	* @param $profileId id of the profile
-	* @return html
+	* @param $profileId mixed id of the profile
+	* @return array json
+    * @throws RequestException
 	*/
 	public function permissions_get( $profileId ) {
-		$routes = explorer::getRoutes();
+		$routes = explorer::getRoutes( true );
 		$profile = new profile( $profileId );
 		if ( empty( $profile->getIndex() ) ) {
 			throw new RequestException( LAN_HTTP_NOT_FOUND, 404 );
