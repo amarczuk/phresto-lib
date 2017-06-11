@@ -57,7 +57,7 @@ class Model implements ModelInterface, \JsonSerializable {
             $option['limit'] = 1;
             $result = static::find( $option );
             if ( !empty( $result ) && !empty( $result[0] ) ) {
-                $this->setObject( $result );
+                $this->setObject( $result[0] );
             } else {
                 $this->getEmpty();
             }

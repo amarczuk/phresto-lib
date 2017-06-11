@@ -10,11 +10,15 @@ phresto = (function() {
 
 	var OAuthToken = '';
 
-	var setToken = function(token) {
-		OAuthToken = token;
+	var setToken = function() {
+		var token = Cookies.get('prsid');
+		if (token) {
+			OAuthToken = token;
+		}
 	}
 
 	var makeRequest = function(type, url, parameters) {
+		setToken();
 		return new Promise(function(resolve, reject) {
 			var xmlhttp = new XMLHttpRequest();
 			xmlhttp.onreadystatechange = function() {

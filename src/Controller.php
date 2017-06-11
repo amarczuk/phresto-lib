@@ -18,6 +18,7 @@ class Controller {
 	protected $query = [];
 	protected $route = [];
 	protected $reqType = 'get';
+	protected $currentUser = null;
 
 	public function __construct( $reqType, $route, $body, $bodyRaw, $query, $headers ) {
 		$this->reqType = $reqType;
@@ -27,6 +28,7 @@ class Controller {
 		$this->query = $query;
 		$this->bodyRaw = $bodyRaw;
 
+		$this->currentUser = user::getCurrent( $this->headers );
 	}
 
 	protected function getRouteMapping( $reqType ) {
@@ -76,12 +78,16 @@ class Controller {
 	public function exec() {
 		list( $method, $args ) = $this->getMethod();
 
-		if ( !$this->auth( $method->name ) ) {
+		if ( !$this->auth( $method->name, $args ) ) {
 			throw new Exception\RequestException( LAN_HTTP_UNAUTHORIZED, 401 );
 		}
 
 		$method->setAccessible( true );
-		return $method->invokeArgs( $this, $args );
+		try {
+			return $method->invokeArgs( $this, $args );
+		} catch ( \TypeError $error ) {
+			throw new Exception\RequestException( LAN_HTTP_BAD_REQUEST, 400 ); 
+		}
 	}
 
 	protected function getParamValue(\ReflectionParameter $param, $value) {
@@ -120,9 +126,8 @@ class Controller {
 	    return preg_match('/[>] ([\\\\A-z]+) /', $export, $matches) ? $matches[1] : null;
 	}
 
-	protected function auth( $methodName ) {
-		$user = user::getCurrent( $this->headers );
-		return $user->hasAccess( static::CLASSNAME, $methodName );
+	protected function auth( $methodName, $args = null ) {
+		return $this->currentUser->hasAccess( static::CLASSNAME, $methodName );
 	}
 
 	protected function jsonResponse( $var ) {

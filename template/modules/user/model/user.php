@@ -94,7 +94,7 @@ class user extends MySQLModel {
         $token = token::decrypt( $encToken, $headers['User-Agent'] );
 
         if ( $token !== false && !empty( $token->getIndex() ) ) {
-            $users = user::findRelated( $token );
+            $users = static::findRelated( $token );
             if ( !empty( $users ) && !empty( $users[0] ) ) {
                 static::$_currentUser = $users[0];
                 return static::$_currentUser;
@@ -113,7 +113,7 @@ class user extends MySQLModel {
             throw new \Exception( 'Blank password or email' );
         }
 
-        $user = user::find( [ 'where' => [ 'email' => $email, 'password' => static::passHash( $password ) ] ] );
+        $user = static::find( [ 'where' => [ 'email' => $email, 'password' => static::passHash( $password ) ] ] );
         if ( empty( $user ) || empty( $user[0] ) || empty( $user[0]->getIndex() ) ) {
             throw new \Exception( 'No user found' );
         }

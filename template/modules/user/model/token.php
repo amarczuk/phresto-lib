@@ -80,10 +80,8 @@ class token extends MySQLModel {
         if ( md5( $userAgent ) != $ua ) {
             return false;
         }
-
-        $result = token::find( [ 'where' => [ 'token' => $token ] ] );
-
-        return (!empty($result[0])) ? $result[0] : false;
+        
+        return new token( [ 'where' => [ 'token' => $token ] ] );
     }
 
     public static function cleanExpired() {

@@ -26,7 +26,7 @@ class ModelController extends Controller {
 		list( $method, $args ) = $this->getMethod();
 		$this->methodName = $method->name;
 
-		if ( !$this->auth( $method->name ) ) {
+		if ( !$this->auth( $method->name, $args ) ) {
 			throw new Exception\RequestException( LAN_HTTP_UNAUTHORIZED, 401 );
 		}
 
@@ -36,7 +36,11 @@ class ModelController extends Controller {
 		}
 
 		$method->setAccessible( true );
-		return $method->invokeArgs( $this, $args );
+		try {
+			return $method->invokeArgs( $this, $args );
+		} catch ( \TypeError $error ) {
+			throw new Exception\RequestException( LAN_HTTP_BAD_REQUEST, 400 ); 
+		}
 	}
 
 	protected function hasNextRoute() {
@@ -44,9 +48,8 @@ class ModelController extends Controller {
 		return count( $routeMapping ) < count( $this->route );
 	}
 
-	protected function auth( $methodName ) {
-		$user = user::getCurrent( $this->headers );
-		return $user->hasAccess( $this->modelName, $methodName );
+	protected function auth( $methodName, $args = null ) {
+		return $this->currentUser->hasAccess( $this->modelName, $methodName );
 	}
 
 	protected function getNextRoute() {
