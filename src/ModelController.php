@@ -16,6 +16,8 @@ class ModelController extends Controller {
 	protected $contextModel;
 	protected $methodName;
 
+	protected static $type = 'model';
+
 	public function __construct( $modelName, $reqType, $route, $body, $bodyRaw, $query, $headers, Model $contextModel = null ) {
 		$this->modelName = $modelName;
 		$this->contextModel = $contextModel;
@@ -25,7 +27,6 @@ class ModelController extends Controller {
 	public function exec() {
 		list( $method, $args ) = $this->getMethod();
 		$this->methodName = $method->name;
-
 		if ( !$this->auth( $method->name, $args ) ) {
 			throw new Exception\RequestException( LAN_HTTP_UNAUTHORIZED, 401 );
 		}
@@ -162,19 +163,26 @@ class ModelController extends Controller {
 	}
 
 	/**
-	* check if record exists
+	* check if record exists, returns count of the collection in X-Count header
 	* @param id record's index
-	* @return 200 - OK, 404 - not found
+	* @return 200 - found or 404 - not found
 	*/
 	public function head( $id = null ) {	
-		if ( empty( $id ) ) {
-			throw new RequestException( LAN_HTTP_NOT_FOUND, 404 );
+		$modelInstance = Container::{$this->modelName}();
+
+		if ( empty( $id ) && empty( $this->contextModel ) ) {
+			header( 'X-Count: ' . $modelInstance::count() );
+			return null;
 		}
 
-		$modelInstance = Container::{$this->modelName}();
 		if ( empty( $this->contextModel ) ) {
 			$modelInstance->setById( $id );
 		} else {
+			if ( empty( $id ) ) {
+				header( 'X-Count: ' . $modelInstance::countRelated( $this->contextModel ) );
+				return null;
+			}
+
 			$modelInstance->setRelatedById( $this->contextModel, $id );
 		}
 
@@ -182,6 +190,7 @@ class ModelController extends Controller {
 			throw new RequestException( LAN_HTTP_NOT_FOUND, 404 );
 		}
 
+		header( 'X-Count: 1' );
 		return null;
 	}
 

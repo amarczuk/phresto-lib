@@ -181,4 +181,45 @@ class MySQLModel extends Model {
         return true;
     }
 
+    public static function count() {
+        $db = MySQLConnector::getInstance( static::DB );
+
+        $sql = "SELECT COUNT(" . static::INDEX . ") as cnt FROM " . static::COLLECTION . " WHERE 1;";
+        $result = $db->query( $sql );
+
+        $record = $db->getNext( $result );
+        return $record['cnt'];
+    }
+
+
+    public static function countRelated( $model ) {
+        if ( !static::isRelated( $model->getName() ) || empty( $model->getIndex() ) ) {
+            throw new RequestException( LAN_HTTP_BAD_REQUEST, 400 );
+        }
+
+        $db = MySQLConnector::getInstance( static::DB );
+        $relation = static::getRelation( $model->getName() );
+
+        $binds = [];
+        switch ( $relation['type'] ) {
+            case '1:1':
+            case '1:n':
+            case 'n:1':
+                $conds[] = 'm.' . $relation['index'] . ' = r.' . $relation['field'];
+                $conds[] = 'r.' . $model->getIndexField() . ' = :mfield';
+                $binds['mfield'] = $model->getIndex();
+                $sql = "SELECT COUNT(m." . static::INDEX . ") as cnt FROM " . static::COLLECTION . " m, " . $model->getCollection() . " r
+                 WHERE " . implode( ' AND ', $conds );
+                $sql .= ( $relation['type'] == '1:n') ? " GROUP BY m." . static::INDEX : '';
+                break;
+            case 'n:n':
+                break;
+        }
+
+        $result = $db->query( $sql, $binds );
+
+        $record = $db->getNext( $result );
+        return $record['cnt'];
+    }
+
 }

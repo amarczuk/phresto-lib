@@ -20,6 +20,8 @@ class Controller {
 	protected $reqType = 'get';
 	protected $currentUser = null;
 
+	protected static $type = 'controller';
+
 	public function __construct( $reqType, $route, $body, $bodyRaw, $query, $headers ) {
 		$this->reqType = $reqType;
 		$this->route = $route;
@@ -228,7 +230,7 @@ class Controller {
 			}
 
 			if ( empty( $endpoints[$endpoint] ) ) {
-				$endpoints[$endpoint] = ['endpoint' => $endpoint, 'methods' => [], 'description' => ''];
+				$endpoints[$endpoint] = ['endpoint' => $endpoint, 'methods' => [], 'description' => '', 'type' => static::$type];
 				if ( !isset( $reqType ) ) {
 					$endpoints[$endpoint]['description'] = $getDescription( $reflection->getDocComment() );
 				}

@@ -2,7 +2,9 @@
 
 namespace Phresto\Modules\Controller;
 use Phresto\Controller;
+use Phresto\ModelController;
 use Phresto\View;
+use Phresto\Config;
 use Phresto\Exception\RequestException;
 use Phresto\Modules\explorer;
 use Phresto\Modules\Model\permission;
@@ -54,5 +56,35 @@ class admin extends Controller {
 			$perm[$value->route][$value->method] = $value;
 		}
 		return $this->jsonResponse( array_values( $perm ) );
+	}
+
+	public function models_get() {
+		$modules = Config::getConfig( 'modules' );
+		$models = [];
+
+		foreach ( $modules as $modname => $module ) {
+			if ( isset( $module['Model'] ) && is_array( $module['Model'] ) ) {
+				foreach ( $module['Model'] as $file ) {
+					$name = str_replace( '.php', '', $file );
+					$class = '\\Phresto\\Modules\\Model\\' . $name;
+					if ( !class_exists( $class ) ) continue;
+
+					$discovery = ModelController::discover( true, $class );
+
+					$remove = [];
+					foreach ($discovery as $key => $value) {
+						if ( mb_strpos( $value['endpoint'], '/' ) !== false ) {
+							array_push( $remove, $key );
+						}
+					}
+					foreach ($remove as $toRemove) {
+						unset( $discovery[$toRemove] );
+					}
+
+					$models = array_merge( $models, $discovery );
+				}
+			}
+		}
+		return $this->jsonResponse( array_values( $models ) );
 	}
 }

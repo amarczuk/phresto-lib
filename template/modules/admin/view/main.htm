@@ -5,43 +5,142 @@
 		</div>
 	</div>
 
-	<div class="row">
-		<div class="small-12 columns">
-			<h4>Permissions</h4>
-		</div>
-	</div>
+	<ul class="tabs" data-tabs id="deeplinked-tabs">
+		<li class="tabs-title is-active"><a href="#permissions" aria-selected="true">Permissions</a></li>
+		<li class="tabs-title"><a href="#models">Models</a></li>
+	</ul>
 
-	<div class="row">
-		<div class="small-12 columns">
-			Profile: <select ng-change="loadPermissions()" ng-model="profileId">
-						<option value="{{profile.id}}" ng-repeat="profile in profiles">{{profile.name}}</option>
-					</select>
-		</div>
-	</div>
+	<div class="tabs-content" data-tabs-content="deeplinked-tabs">
+  		<div class="tabs-panel is-active" id="permissions">
+			<div class="row">
+				<div class="small-12 columns">
+					<h4>Permissions</h4>
+				</div>
+			</div>
 
-	<div class="row">
-		<div class="small-12 columns">
-			<table class="hover">
-				<tr>
-					<th>route</th>
-					<th>head</th>
-					<th>get</th>
-					<th>post</th>
-					<th>patch</th>
-					<th>put</th>
-					<th>delete</th>
-				</tr>
-				<tr ng-repeat="perm in permissions | orderBy:'name'">
-					<td>{{perm.name}}</td>
-					<td class='text-center'><input type="checkbox" ng-model="perm.head.allow" ng-click="save(perm.head)" ng-if="perm.head != undefined" ng-disabled="loading"></td>
-					<td class='text-center'><input type="checkbox" ng-model="perm.get.allow" ng-click="save(perm.get)" ng-if="perm.get != undefined"></td>
-					<td class='text-center'><input type="checkbox" ng-model="perm.post.allow" ng-click="save(perm.post)" ng-if="perm.post != undefined"></td>
-					<td class='text-center'><input type="checkbox" ng-model="perm.patch.allow" ng-click="save(perm.patch)" ng-if="perm.patch != undefined"></td>
-					<td class='text-center'><input type="checkbox" ng-model="perm.put.allow" ng-click="save(perm.put)" ng-if="perm.put != undefined"></td>
-					<td class='text-center'><input type="checkbox" ng-model="perm.delete.allow" ng-click="save(perm.delete)" ng-if="perm.delete != undefined"></td>
-				</tr>
-			</table>
+			<div class="row">
+				<div class="small-12 columns">
+					Profile: <select ng-change="loadPermissions()" ng-model="profileId">
+								<option value="{{profile.id}}" ng-repeat="profile in profiles">{{profile.name}}</option>
+							</select>
+				</div>
+			</div>
+
+			<div class="row">
+				<div class="small-12 columns">
+					<table class="hover">
+						<tr>
+							<th>route</th>
+							<th>head</th>
+							<th>get</th>
+							<th>post</th>
+							<th>patch</th>
+							<th>put</th>
+							<th>delete</th>
+						</tr>
+						<tr ng-repeat="perm in permissions | orderBy:'name'">
+							<td>{{perm.name}}</td>
+							<td class='text-center'><input type="checkbox" ng-model="perm.head.allow" ng-click="save(perm.head)" ng-if="perm.head != undefined" ng-disabled="loading"></td>
+							<td class='text-center'><input type="checkbox" ng-model="perm.get.allow" ng-click="save(perm.get)" ng-if="perm.get != undefined"></td>
+							<td class='text-center'><input type="checkbox" ng-model="perm.post.allow" ng-click="save(perm.post)" ng-if="perm.post != undefined"></td>
+							<td class='text-center'><input type="checkbox" ng-model="perm.patch.allow" ng-click="save(perm.patch)" ng-if="perm.patch != undefined"></td>
+							<td class='text-center'><input type="checkbox" ng-model="perm.put.allow" ng-click="save(perm.put)" ng-if="perm.put != undefined"></td>
+							<td class='text-center'><input type="checkbox" ng-model="perm.delete.allow" ng-click="save(perm.delete)" ng-if="perm.delete != undefined"></td>
+						</tr>
+					</table>
+				</div>
+			</div>
 		</div>
+
+		<div class="tabs-panel" id="models">
+			<div class="row">
+				<div class="small-12 columns">
+					<h4>Models</h4>
+				</div>
+			</div>
+			<div class="row">
+				<div class="small-12 medium-3 columns">
+					<ul class="vertical menu">
+						<li ng-repeat="model in models" ng-class="{'active': currentModel.endpoint == model.endpoint}"><a href="javascript://" ng-click="changeModel(model)">{{model.endpoint}}</a></li>
+					</ul>
+				</div>
+				<div class="small-12 medium-9 columns">
+					<h4 ng-show="currentModel.endpoint">
+						{{currentModel.endpoint}} 
+						(<a ng-click="edit({})" data-open="editModal">add new</a>)
+						<img src="/modules/admin/static/wait.gif" ng-if="loading">
+					</h4>
+					
+					<div class="text-center" ng-show="records.length > 0">
+						<button class="button" ng-disabled="page === 1" ng-click="changePage(page - 1)"> &lt; </button>
+						<button class="button" ng-disabled="page === pageno" ng-repeat="pageno in pages" ng-click="changePage(pageno)">{{pageno}}</button>
+						<button class="button" ng-disabled="page === pages[pages.length-1]" ng-click="changePage(page + 1)"> &gt; </button>
+					</div>
+
+					<table class="stack hover" ng-show="records.length > 0">
+						<thead>
+    						<tr>
+    							<td ng-repeat="param in currentModel.params">{{param.name}}</td>
+    							<td colspan="2"></td>
+    						</tr>
+    					</thead>
+    					<tbody>
+    						<tr ng-repeat="record in records">
+    							<td ng-repeat="param in currentModel.params">{{record[param.name]}}</td>
+    							<td class="text-center" width="5%"><a ng-click="edit(record)" data-open="editModal"><i class="foundicon-edit"></i></a></td>
+    							<td class="text-center" width="5%"><a ng-click="remove(record)"><i class="foundicon-remove"></i></a></td>
+    						</tr>
+    					</tbody>
+					</table>
+
+					<div class="text-center" ng-show="records.length > 0">
+						<button class="button" ng-disabled="page === 1" ng-click="changePage(page - 1)"> &lt; </button>
+						<button class="button" ng-disabled="page === pageno" ng-repeat="pageno in pages" ng-click="changePage(pageno)">{{pageno}}</button>
+						<button class="button" ng-disabled="page === pages[pages.length-1]" ng-click="changePage(page + 1)"> &gt; </button>
+					</div>
+
+				</div>
+			</div>
+		</div>
+
+		<div class="reveal" 
+			 id="editModal" 
+			 data-reveal 
+			 data-close-on-esc="true"
+			 data-close-on-click="false"
+			 data-animation-in="slide-in-down"
+			 data-animation-out="slide-out-down"
+			 data-animation-options="showDelay:10; hideDelay:10"">
+		 
+			<fieldset class="fieldset">
+				<legend>{{(currentRecord.id) ? 'edit' : 'add'}} {{currentModel.endpoint}}'s record</legend>
+
+				<label ng-repeat="param in currentModel.params">
+					{{param.name}} ({{param.type ? param.type : 'mixed'}})
+					<span ng-if="param.type=='string'"><input type="checkbox" ng-model="param.textarea"> long text</input></span>
+					<textarea ng-show="getInputType(param) == 'text' && param.textarea" ng-model="currentRecord[param.name]" style="min-height: 100px"></textarea>
+					<input type="{{getInputType(param)}}" 
+						   ng-show="getInputType(param) != 'text' || (getInputType(param) == 'text' && !param.textarea)" 
+						   ng-model="currentRecord[param.name]" 
+						   id="input_{{param.name}}"
+						   ng-class="{'switch-input': getInputType(param) == 'checkbox'}">
+					<label ng-show="getInputType(param) == 'checkbox'" 
+						   class="switch-paddle" 
+						   for="input_{{param.name}}"
+						   style="display: block;">
+					    <span class="show-for-sr"></span>
+					</label>
+				</label>
+				<button class="button" ng-click="saveRecord()">save</button>
+				<button class="button" data-close>cancel</button>
+
+			</fieldset>
+
+		 	<button class="close-button" data-close aria-label="Close modal" type="button">
+		    	<span aria-hidden="true">&times;</span>
+		  	</button>
+		</div>
+
 	</div>
 
 	<message/>

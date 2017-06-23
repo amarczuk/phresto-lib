@@ -55,7 +55,6 @@ class Router {
 		    	throw new Exception\RequestException( LAN_HTTP_NOT_FOUND, 404 );
 		    }
 		}
-
 	    return $instance->exec();
 	}
 

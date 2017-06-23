@@ -160,6 +160,10 @@ class Model implements ModelInterface, \JsonSerializable {
         return [ new $class() ];
     }
 
+    public static function count() {
+        return 0;
+    }
+
     public static function findRelated( Model $model, $query = null ) {
     	$class = static::CLASSNAME;
         return [ new $class() ];
