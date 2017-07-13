@@ -521,6 +521,9 @@ class View {
 		
 		if ( isset( $this->config['headers'] ) && is_array( $this->config['headers'] ) ) {
 			foreach( $this->config['headers'] as $key => $var ) {
+				if ($key == 'base') {
+					$head .= "\t<base href='{$var}'>\n";
+				}
 				$head.="\t<meta name=\"{$key}\" content=\"{$var}\">\n";
 			}
 		}

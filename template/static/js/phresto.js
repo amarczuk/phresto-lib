@@ -15,7 +15,7 @@ phresto = (function() {
 		if (token) {
 			OAuthToken = token;
 		}
-	}
+	};
 
 	var makeRequest = function(type, url, parameters) {
 		setToken();
@@ -34,7 +34,7 @@ phresto = (function() {
 			    }
 
 			    if (this.readyState == 4 && this.status == 200 && type == 'HEAD') {
-			    	return resolve();
+			    	return resolve(xmlhttp.getResponseHeader("X-Count"));
 			    }
 
 			    if (this.readyState == 4 && this.status == 200) {
@@ -59,57 +59,57 @@ phresto = (function() {
 			}
 			xmlhttp.send(requestBody);
 		});
-	}
+	};
 
 	var get = function(url) {
 		return makeRequest('GET', url);
-	}
+	};
 
 	var getById = function(name, id) {
 		return get(name + '/' + id);
-	}
+	};
 
 	var exists = function(name, id) {
 		return new Promise(function(resolve, reject) {
 			var url = name;
 			if (id) url += '/' + id;
 			makeRequest('HEAD', url)
-				.then(function() {
-					resolve(true);
+				.then(function(count) {
+					resolve(count);
 				})
 				.catch(function(error) {
-					if (error.name = 'RequestError' && error.status == 404) {
+					if (error.name == 'RequestError' && error.status == 404) {
 						return reject(new RequestError(false, 404));
 					}
 
 					reject(error);
 				});
 		});
-	}
+	};
 
 	var create = function(name, params) {
 		return makeRequest('POST', name, params);
-	}
+	};
 
 	var destroy = function(name, id) {
 		return Delete(name + '/' + id);
-	}
+	};
 
 	var Delete = function(url) {
 		return makeRequest('DELETE', url);
-	}
+	};
 
 	var update = function(name, id, params) {
 		return patch( name + '/' + id, params);
-	}
+	};
 
 	var patch = function(url, params) {
 		return makeRequest('PATCH', url, params);
-	}
+	};
 
 	var upsert = function(name, params) {
 		return makeRequest('PUT', name, params);
-	}
+	};
 
 	return {
 		get: get,
@@ -124,6 +124,6 @@ phresto = (function() {
 		upsert: upsert,
 		put: upsert,
 		setToken: setToken
-	}
+	};
 
 })();
