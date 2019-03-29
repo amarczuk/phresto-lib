@@ -11,7 +11,7 @@ use Phresto\Modules\GithubApi;
 use Phresto\Modules\LinkedinApi;
 use Phresto\Exception\RequestException;
 
-/** 
+/**
 * Additional user's REST endpoints
 */
 class user extends CustomModelController {
@@ -28,11 +28,11 @@ class user extends CustomModelController {
 		}
 
 		/**
-		 * user can only access himself unless it's superuser (status = 2) 
+		 * user can only access himself unless it's superuser (status = 2)
 		 * or it's getting users related to the other model
 		 */
-		return $hasAccess && 
-			   ( $this->currentUser->status == 2 || 
+		return $hasAccess &&
+			   ( $this->currentUser->status == 2 ||
 				 ( !empty( $args[0] ) && $this->currentUser->getIndex() == $args[0] ) ||
 				 ( in_array( $methodName, ['head', 'get'] ) && !empty( $this->contextModel ) )
 			   );
@@ -89,7 +89,7 @@ class user extends CustomModelController {
 		}
 
 		$modelInstance = Container::{$this->modelName}( $id );
-		
+
 		// only super user can change status and profile
 		if ( $this->currentUser->status != 2 ) {
 			if ( !empty( $this->body['status'] ) ) $this->body['status'] = $modelInstance->status;
@@ -107,7 +107,7 @@ class user extends CustomModelController {
 
 		$ua = ( !empty( $this->headers['User-Agent'] ) ) ? $this->headers['User-Agent'] : '';
 		$encrypted = $token->encrypt( $ua );
-		setcookie( 'prsid', $encrypted, 0, '/' );
+		setcookie( 'prsid', $encrypted, 0, '/', null, false, true );
 		return View::jsonResponse( [ 'token' => $encrypted, 'expires' => $token->expires->format( \DateTime::ISO8601 ) ] );
 	}
 
@@ -129,7 +129,7 @@ class user extends CustomModelController {
 		return $this->authenticate_post( $email, $password );
 	}
 
-	/** 
+	/**
 	* login/register using OAuth
 	* @param string $service name of the external service (google, facebook, github, linkedin)
 	* @param in query string ?ret=welcome.html service to redirect after login
@@ -164,14 +164,14 @@ class user extends CustomModelController {
 			$user = static::MODELCLASS;
 			$token = $user::socialLogin( $oauth->getUserDetails() );
 			$view = View::getView( 'oauth', 'user' );
-			$view->add( 'oauthSuccess', 
-						['ret' => ( !empty( $_SESSION['ret'] ) ? $_SESSION['ret'] : '')], 
+			$view->add( 'oauthSuccess',
+						['ret' => ( !empty( $_SESSION['ret'] ) ? $_SESSION['ret'] : '')],
 						'user' );
 			unset( $_SESSION['ret'] );
 			$ua = ( !empty( $this->headers['User-Agent'] ) ) ? $this->headers['User-Agent'] : '';
 			setcookie( 'prsid', $token->encrypt( $ua ), 0, '/' );
 			return $view->get();
-			
+
 		} catch( \Exception $e ) {
 			throw new RequestException( LAN_HTTP_UNAUTHORIZED, 401 );
 		}
