@@ -7,7 +7,7 @@ class MySQLConnector extends DBConnector
 {
 
     const CLASSNAME = __CLASS__;
-    
+
     public function connect( $options ) {
         $db = @Container::mysqli( $options['host'], $options['user'], $options['passwd'], $options['dbname'] );
 
@@ -23,11 +23,11 @@ class MySQLConnector extends DBConnector
 
         return $db;
     }
-    
+
     public function close() {
-        $this->connection->close(); 
+        $this->connection->close();
     }
-    
+
     public function escape( $var ) {
 
         if ( is_bool( $var ) ) {
@@ -62,9 +62,9 @@ class MySQLConnector extends DBConnector
         }
 
         throw new DBException( "Provided type is not supported" );
-        
+
     }
-    
+
     public function bind( $query, $variables ) {
         foreach ( $variables as $key => $val ) {
             $val = $this->escape( $val );
@@ -74,6 +74,15 @@ class MySQLConnector extends DBConnector
         return $query;
     }
 
+    public function exec( $query, $bindings = [] ) {
+        if ( !empty( $bindings ) ) {
+            $query = $this->bind( $query, $bindings );
+        }
+
+        $this->connection->multi_query( $query );
+        while ($this->connection->next_result());
+    }
+
     public function query( $query, $bindings = [] ) {
         if ( !empty( $bindings ) ) {
             $query = $this->bind( $query, $bindings );
@@ -81,7 +90,7 @@ class MySQLConnector extends DBConnector
 
         if ( !$result = $this->connection->query( $query ) ) {
             throw new DBException( "Query failed: " . $this->getLastError() );
-            
+
         }
         return $result;
     }
@@ -89,7 +98,7 @@ class MySQLConnector extends DBConnector
     public function count( $resource ) {
         return $resource->num_rows;
     }
-    
+
     public function getNext( $resource ) {
         return $resource->fetch_assoc();
     }

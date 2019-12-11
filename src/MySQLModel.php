@@ -123,6 +123,8 @@ class MySQLModel extends Model {
             case '1:1':
             case '1:n':
             case 'n:1':
+            case '1>1':
+            case '1<1':
                 $conds[] = 'm.' . $relation['index'] . ' = r.' . $relation['field'];
                 $conds[] = 'r.' . $model->getIndexField() . ' = :mfield';
                 $binds['mfield'] = $model->getIndex();
@@ -133,7 +135,7 @@ class MySQLModel extends Model {
             case 'n:n':
                 break;
         }
-        
+
         $sql .= static::extendQuery( $query, 'm.' );
 
         $result = $db->query( $sql, $binds );
@@ -159,7 +161,7 @@ class MySQLModel extends Model {
             $sql .= " WHERE " . static::INDEX . " = :" . static::INDEX . " LIMIT 1";
         } else {
             $sql = "INSERT INTO " . static::COLLECTION . " ( `" . implode( '`, `', static::getFields() ) . "` ) ";
-            $sql .= "VALUES ( " . implode( ', :', static::getFields() ) . " )";
+            $sql .= "VALUES ( :" . implode( ', :', static::getFields() ) . " )";
         }
         $db->query( $sql, $this->_properties );
 
@@ -177,7 +179,7 @@ class MySQLModel extends Model {
         $sql = "delete from " . static::COLLECTION . " where " . static::INDEX . " = :index limit 1";
         $bind = [ 'index' => $this->_properties[static::INDEX] ];
         $db->query( $sql, $bind );
-        
+
         return true;
     }
 
@@ -205,6 +207,8 @@ class MySQLModel extends Model {
             case '1:1':
             case '1:n':
             case 'n:1':
+            case '1>1':
+            case '1<1':
                 $conds[] = 'm.' . $relation['index'] . ' = r.' . $relation['field'];
                 $conds[] = 'r.' . $model->getIndexField() . ' = :mfield';
                 $binds['mfield'] = $model->getIndex();
@@ -220,6 +224,65 @@ class MySQLModel extends Model {
 
         $record = $db->getNext( $result );
         return $record['cnt'];
+    }
+
+    public static function getCreationCode() {
+        $sql = "CREATE TABLE IF NOT EXISTS `" . static::COLLECTION . "` (\n";
+        foreach (static::$_fields as $field => $type) {
+            $sqlType = static::getSqlType($type);
+            $sql .= "  `{$field}` {$sqlType}";
+            if ($field == static::INDEX) {
+                if ($sqlType == 'INT') {
+                    $sql .= ' AUTO_INCREMENT';
+                }
+                $sql .= ' PRIMARY KEY';
+            }
+            $sql .= ",\n";
+        }
+        return trim($sql, ",\n") . "\n) ENGINE=INNODB;\n";
+    }
+
+    public static function getRelationCode() {
+        $sql = '';
+        foreach (static::$_relations as $model => $relation) {
+
+            $fkTypes = ['n:1', '1<1'];
+            if (!in_array($relation['type'], $fkTypes)) continue;
+            $sql .= "  ADD CONSTRAINT\n";
+            $sql .= "    FOREIGN KEY ({$relation['index']})\n";
+            $sql .= "      REFERENCES {$relation['model']}({$relation['field']})\n";
+            if (!empty($relation['dbactions'])) {
+                $sql .= "      {$relation['dbactions']};\n";
+            } else {
+                $sql .= "      ON UPDATE CASCADE ON DELETE CASCADE;\n";
+            }
+        }
+        if (empty($sql)) return '';
+
+        $sql = "ALTER TABLE `" . static::COLLECTION . "` \n" . $sql;
+        return $sql;
+    }
+
+    private static function getSqlType($type) {
+        if (is_array($type)) {
+            return $type['db'];
+        }
+
+        switch ($type) {
+            case 'string':
+                return 'VARCHAR(255)';
+            case 'int':
+                return 'INT';
+            case 'boolean':
+                return 'BOOLEAN';
+            case 'double':
+            case 'float':
+                return 'DOUBLE';
+            case 'DateTime':
+                return 'DATETIME';
+            default:
+                return mb_strtoupper($type);
+        }
     }
 
 }

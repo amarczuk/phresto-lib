@@ -16,17 +16,17 @@ class user extends MySQLModel {
     const COLLECTION = 'user';
 
     protected static $_currentUser = null;
-    protected static $_fields = [ 'id' => 'int', 
-                                  'email' => 'string', 
-                                  'password' => 'string', 
-                                  'name' => 'string', 
-                                  'status' => 'int', 
-                                  'created' => 'DateTime', 
+    protected static $_fields = [ 'id' => 'int',
+                                  'email' => 'string',
+                                  'password' => 'string',
+                                  'name' => 'string',
+                                  'status' => 'int',
+                                  'created' => 'DateTime',
                                   'last_login' => 'DateTime',
-                                  'profile' => 'int' 
+                                  'profile' => 'int'
                                 ];
 
-    protected static $_defaults = [ 'status' => 1, 'created' => '' ];
+    protected static $_defaults = [ 'status' => 1, 'created' => '', 'last_login' => '' ];
     protected static $_relations = [
         'token' => [
             'type' => '1:n',
@@ -38,7 +38,8 @@ class user extends MySQLModel {
             'type' => 'n:1',
             'model' => 'profile',
             'field' => 'id',
-            'index' => 'profile'
+            'index' => 'profile',
+            'dbactions' => 'ON UPDATE CASCADE ON DELETE SET NULL'
         ]
     ];
 
@@ -65,13 +66,31 @@ class user extends MySQLModel {
 
     public function hasAccess( $class, $method ) {
         $class = substr( $class, mb_strrpos( $class, '\\' ) + 1 );
+        $route = $class;
         if ( mb_strpos( $method, '_' ) !== false ) {
             $tmp = explode( '_', $method );
-            $class = $class . '/' . $tmp[0];
+            $route = $class . '/' . $tmp[0];
             $method = $tmp[1];
         }
-        $permission = permission::find( [ 'where' => ['profile' => $this->profile, 'route' => $class, 'method' => $method ] ] );
-    
+        $permission = permission::find( [ 'where' => ['profile' => $this->profile, 'route' => $route, 'method' => $method ] ] );
+        if (empty($permission) || empty($permission[0])) {
+            $permission = permission::find( [ 'where' => ['profile' => $this->profile, 'route' => $route, 'method' => '*' ] ] );
+        }
+        if (empty($permission) || empty($permission[0])) {
+            if ($route !== $class) {
+                $route = "{$class}/*";
+            } else {
+                $route = '*';
+            }
+            $permission = permission::find( [ 'where' => ['profile' => $this->profile, 'route' => $route, 'method' => $method ] ] );
+        }
+        if (empty($permission) || empty($permission[0])) {
+            $permission = permission::find( [ 'where' => ['profile' => $this->profile, 'route' => $route, 'method' => '*' ] ] );
+        }
+        if (empty($permission) || empty($permission[0]) && $route !== '*') {
+            $permission = permission::find( [ 'where' => ['profile' => $this->profile, 'route' => '*', 'method' => '*' ] ] );
+        }
+
         return ( !empty( $permission ) && !empty( $permission[0] ) && $permission[0]->getIndex() && $permission[0]->allow === true );
     }
 
@@ -83,7 +102,7 @@ class user extends MySQLModel {
         if ( !empty( static::$_currentUser ) ) {
             return static::$_currentUser;
         }
-        
+
         $encToken = '';
         if ( !empty( $headers['Authorization'] ) ) {
             $encToken = str_replace( 'Bearer ', '', $headers['Authorization'] );
@@ -126,7 +145,7 @@ class user extends MySQLModel {
 
     public static function socialLogin( $userDetails ) {
         $user = new user( [ 'where' => [ 'email' => $userDetails['email'] ] ] );
-        
+
         if ( empty( $user->getIndex() ) ) {
             $user->email = $userDetails['email'];
             $user->name = $userDetails['name'];

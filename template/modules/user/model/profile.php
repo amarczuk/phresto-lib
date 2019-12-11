@@ -12,7 +12,7 @@ class profile extends MySQLModel {
     const INDEX = 'id';
     const COLLECTION = 'profile';
 
-    protected static $_fields = [ 'id' => 'int', 
+    protected static $_fields = [ 'id' => 'int',
                                   'name' => 'string',
                                   'created' => 'DateTime'
                                 ];
@@ -31,7 +31,7 @@ class profile extends MySQLModel {
             'index' => 'id'
         ]
     ];
-    
+
     protected function default_created() {
         return new \DateTime();
     }

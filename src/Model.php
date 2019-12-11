@@ -11,7 +11,7 @@ class Model implements ModelInterface, \JsonSerializable {
 	const NAME = 'model';
 	const INDEX = 'id';
     const COLLECTION = 'model';
-    
+
     protected $_properties = [];
     protected $_initial = [];
     protected $_debug = '';
@@ -21,26 +21,27 @@ class Model implements ModelInterface, \JsonSerializable {
     * array of the model field names (as in db) and types
     * [
     *   'id' => 'int',
-    *   'name' => 'string',
+    *   'name' => [type: 'string', db: 'TEXT'],
     *   'created' => 'DateTime'
     * ]
     */
     protected static $_fields = [];
 
     /**
-    * array default field values (['field_name' => 'default value'])
-    * if value should be calculated during runtime leave value empty and
+    * array of calculated default field values (['field_name' => 'default value'])
+    * if value should be determined during runtime leave value empty and
     * add protected function `default_field_name()` returning default value
     */
 	protected static $_defaults = [];
 
     /**
-    * array describes model relations:
+    * array describing model relations:
     * 'model_name' => [ // key is the related model name
     *        'type' => '1:n', // 1:1, 1>1, 1<1, 1:n, n:1, n:n - first model second related model
     *        'model' => 'model_name', // related model name
     *        'field' => 'field_in_related_model',  // name of the FK in related model
     *        'index' => 'id', // index (FK) in the model
+    *        'dbactions' => 'ON UPDATE CASCADE ON DELETE CASCADE', // relation actions if applicable
     *        'junction' => [ // junction table description for n:n relations
     *           'collection' => 'junction_table', // junction table name
     *           'field' => 'related_model_fk', // related model FK
@@ -50,7 +51,7 @@ class Model implements ModelInterface, \JsonSerializable {
     */
     protected static $_relations = [];
 
-    public function __construct( $option = null ) {
+    public function __construct( $option = null, $setAsNew = false ) {
         if ( empty( $option ) ) {
             $this->getEmpty();
         } else if ( is_array( $option ) && isset( $option['where'] ) ) {
@@ -72,6 +73,7 @@ class Model implements ModelInterface, \JsonSerializable {
         }
 
         $this->_initial = $this->_properties;
+        if ($setAsNew) $this->_new = true;
     }
 
     public static function getIndexField() {
@@ -105,6 +107,14 @@ class Model implements ModelInterface, \JsonSerializable {
 
     public static function getFieldsAndTypes() {
         return static::$_fields;
+    }
+
+    public static function getCreationCode() {
+        return '';
+    }
+
+    public static function getRelationCode() {
+        return '';
     }
 
     protected function getEmpty() {
@@ -264,14 +274,15 @@ class Model implements ModelInterface, \JsonSerializable {
     public function __isset( $name ) {
         $debug = ( $name == '_debug_' && !empty( $this->_debug ) );
     	return ( $debug || ( array_key_exists( $name, static::$_fields ) && isset( $this->_properties[$name] ) ) );
-    	
+
     }
 
     protected function filterJson( $fields ) {
         return $fields;
     }
 
-    protected function getUniType( $type ) {
+    protected function getUniType( $typeDef ) {
+        $type = is_array($typeDef) ? $typeDef['type'] : $typeDef;
         switch ( $type ) {
             case 'bool':
                 return 'boolean';

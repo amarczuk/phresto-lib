@@ -8,7 +8,7 @@ class DBConnector implements DBConnectorInterface
 {
 
     const CLASSNAME = __CLASS__;
-    
+
     protected static $dbs = [];
     protected $connection;
 
@@ -34,31 +34,30 @@ class DBConnector implements DBConnectorInterface
     }
 
     public function __construct( $name, $options ) {
-
         if ( !$this->connection = $this->connect( $options ) ) {
             throw new DBException( "Cannot connect to database" );
         }
 
         static::$dbs[$name] = $this;
     }
-    
+
     public function __destruct() {
         $this->disconnect();
     }
-    
-    
+
+
     public function connect( $options ) {
     }
 
     public function disconnect() {
     }
-    
+
     public function close() {
     }
-    
+
     public function escape( $var ) {
     }
-    
+
     public function bind( $query, $variables ) {
     }
 
@@ -67,7 +66,7 @@ class DBConnector implements DBConnectorInterface
 
     public function count( $resource ) {
     }
-    
+
     public function getNext( $resource ) {
     }
 

@@ -12,7 +12,7 @@ class permission extends MySQLModel {
     const INDEX = 'id';
     const COLLECTION = 'permission';
 
-    protected static $_fields = [ 'id' => 'int', 
+    protected static $_fields = [ 'id' => 'int',
                                   'profile' => 'int',
                                   'route' => 'string',
                                   'method' => 'string',
@@ -28,7 +28,7 @@ class permission extends MySQLModel {
             'index' => 'profile'
         ]
     ];
-    
+
     protected function default_created() {
         return new \DateTime();
     }

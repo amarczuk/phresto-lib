@@ -15,7 +15,7 @@ class Utils {
 		}
 
 		if ( ( empty( $path[0] ) || $path[0] != 'Phresto' ) && ( empty( $path[1] ) || $path[1] != 'Modules' ) ) return;
-		
+
 		foreach ( $modules as $module => $files ) {
 			if ( !empty( $path[3] ) && !empty( $files[$path[2]] ) ) {
 				if ( in_array( $path[3] . '.php', $files[$path[2]] ) ) {
@@ -27,7 +27,7 @@ class Utils {
 				break;
 			}
 		}
-		
+
 		if ( !empty( $file ) && file_exists( $file ) ) {
 			require_once( $file );
 		}
@@ -37,6 +37,7 @@ class Utils {
 		$app = Config::getConfig( 'app' );
 		if ( $app['app']['env'] == 'dev' ) {
 			Config::delConfig( 'modules' );
+            self::updateModules();
 		}
 		spl_autoload_register( 'Phresto\\Utils::autoload' );
 	}
@@ -45,7 +46,7 @@ class Utils {
         if ( !$delay ) {
             header( "Location:{$url}" );
             die();
-            
+
         } else {
             header( "Refresh: {$delay}; url={$url}" );
         }
@@ -78,5 +79,5 @@ class Utils {
     	if ( !isset( $arr ) || !is_array( $arr ) ) return false;
     	return array_keys($arr) !== range(0, count($arr) - 1);
     }
-    
+
 }

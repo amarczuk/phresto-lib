@@ -1,5 +1,5 @@
 angular.module('app', []).controller(
-  'adminAppController', 
+  'adminAppController',
   [ '$scope',
     '$document',
     '$rootScope',
@@ -123,7 +123,7 @@ angular.module('app', []).controller(
           if (method == 'get') {
             var offset = ($scope.page - 1) * $scope.limit;
             url += '?offset=' + offset + '&limit=' + $scope.limit;
-          } 
+          }
 
           if (method == 'delete') {
             url += '/' + body.id;
@@ -160,8 +160,11 @@ angular.module('app', []).controller(
       }
 
       $scope.save = function(perm) {
+        console.log(perm)
         $scope.loading = true;
-        phresto.upsert('permission', perm )
+        var toSave = Object.assign({}, perm);
+        toSave.allow = !toSave.allow;
+        phresto.upsert('permission', toSave )
           .then(function(permission) {
             if (!perm.id) perm.id = permission.id;
             $scope.loading = false;

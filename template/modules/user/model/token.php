@@ -13,11 +13,11 @@ class token extends MySQLModel {
     const INDEX = 'id';
     const COLLECTION = 'token';
 
-    protected static $_fields = [ 'id' => 'int', 
-                                  'created' => 'DateTime', 
-                                  'token' => 'string', 
-                                  'user' => 'int', 
-                                  'ttl' => 'int' 
+    protected static $_fields = [ 'id' => 'int',
+                                  'created' => 'DateTime',
+                                  'token' => 'string',
+                                  'user' => 'int',
+                                  'ttl' => 'int'
                                 ];
     protected static $_defaults = [ 'ttl' => 7, 'created' => '' ];
     protected static $_relations = [
@@ -28,7 +28,7 @@ class token extends MySQLModel {
             'index' => 'user'
         ]
     ];
-    
+
     protected function default_created() {
         return new \DateTime();
     }
@@ -52,7 +52,7 @@ class token extends MySQLModel {
 
     public function encrypt( $userAgent ) {
         $conf = Config::getConfig( 'app' );
-        return openssl_encrypt( 
+        return openssl_encrypt(
             md5( $userAgent ) . '_' . $this->token,
             'aes-256-ctr',
             $conf['app']['tokenEncryptionPass'],
@@ -63,7 +63,7 @@ class token extends MySQLModel {
 
     public static function decrypt( $token, $userAgent ) {
         $conf = Config::getConfig( 'app' );
-        $decoded = openssl_decrypt( 
+        $decoded = openssl_decrypt(
             $token,
             'aes-256-ctr',
             $conf['app']['tokenEncryptionPass'],
@@ -80,7 +80,7 @@ class token extends MySQLModel {
         if ( md5( $userAgent ) != $ua ) {
             return false;
         }
-        
+
         return new token( [ 'where' => [ 'token' => $token ] ] );
     }
 
