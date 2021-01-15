@@ -5,7 +5,7 @@ use Phresto\Model;
 
 interface ModelInterface {
 
-	public function __construct( $option = null );
+	public function __construct( $option = null, $checkIfNew = true );
 
 	public static function find( $query );
 	public static function findRelated( Model $model, $query = null );

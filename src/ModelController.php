@@ -40,7 +40,7 @@ class ModelController extends Controller {
 		try {
 			return $method->invokeArgs( $this, $args );
 		} catch ( \TypeError $error ) {
-			throw new Exception\RequestException( LAN_HTTP_BAD_REQUEST, 400 ); 
+			throw new Exception\RequestException( LAN_HTTP_BAD_REQUEST, 400 );
 		}
 	}
 
@@ -88,10 +88,10 @@ class ModelController extends Controller {
 
 		if ( in_array( $method->name, ['post', 'put', 'patch'] ) ) {
 			$reflection = new \ReflectionClass( $className );
-			$staticProps = $reflection->getStaticProperties(); 
+			$staticProps = $reflection->getStaticProperties();
 			$modelFields = $staticProps['_fields'];
 			foreach ( $modelFields as $key => $value) {
-				$params[] = [ 'name' => $key, 'type' => $value ];
+				$params[] = [ 'name' => $key, 'type' => (is_array($value)) ? $value['type'] : $value ];
 			}
 
 		}
@@ -111,7 +111,7 @@ class ModelController extends Controller {
 		};
 
 		$reflection = new \ReflectionClass( $className );
-		$staticProps = $reflection->getStaticProperties(); 
+		$staticProps = $reflection->getStaticProperties();
 		if ( empty( $staticProps['_relations'] ) ) {
 			return [];
 		}
@@ -145,7 +145,7 @@ class ModelController extends Controller {
 				if ( in_array( $method['name'], $methodsAllowed[$relation['type'] ] ) ) {
 					$methods[] = $method;
 				}
-			} 
+			}
 
 			$endpoint = $classNameOnly . '/_id_/' . $model;
 			$endpoints[$endpoint] = [ 'endpoint' => $endpoint, 'methods' => $methods, 'description' => $modelDiscovery['description'] ];
@@ -167,7 +167,7 @@ class ModelController extends Controller {
 	* @param id record's index
 	* @return 200 - found or 404 - not found
 	*/
-	public function head( $id = null ) {	
+	public function head( $id = null ) {
 		$modelInstance = Container::{$this->modelName}();
 
 		if ( empty( $id ) && empty( $this->contextModel ) ) {
@@ -240,9 +240,9 @@ class ModelController extends Controller {
 			$related = $relation['field'];
 			$modelInstance->$fk = $this->contextModel->$related;
 		}
-		
+
 		$modelInstance->save();
-		return $this->jsonResponse( $modelInstance );		
+		return $this->jsonResponse( $modelInstance );
 	}
 
 	/**
@@ -305,7 +305,7 @@ class ModelController extends Controller {
 		}
 
 		$modelInstance = Container::{$this->modelName}();
-		
+
 		if ( !empty( $this->contextModel ) ) {
 			$modelInstance->setRelatedById( $this->contextModel, $id );
 		} else {

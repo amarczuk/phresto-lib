@@ -51,29 +51,30 @@ class Model implements ModelInterface, \JsonSerializable {
     */
     protected static $_relations = [];
 
-    public function __construct( $option = null, $setAsNew = false ) {
+    public function __construct( $option = null, $checkIfNew = true ) {
+        $this->_new = true;
+
         if ( empty( $option ) ) {
             $this->getEmpty();
         } else if ( is_array( $option ) && isset( $option['where'] ) ) {
             $option['limit'] = 1;
             $result = static::find( $option );
             if ( !empty( $result ) && !empty( $result[0] ) ) {
-                $this->setObject( $result[0] );
+                $this->setObject( $result[0], $checkIfNew );
             } else {
                 $this->getEmpty();
             }
         } else if ( is_array( $option ) ) {
-            $this->set( $option );
+            $this->set( $option, $checkIfNew );
         } else if ( is_object( $option ) ) {
-            $this->setObject( $option );
+            $this->setObject( $option, $checkIfNew );
         } else if ( is_string( $option ) && !is_numeric( $option ) && $json = json_decode( $option, true ) ) {
-            $this->set( $json );
+            $this->set( $json, $checkIfNew );
         } else {
             $this->setById( $option );
         }
 
         $this->_initial = $this->_properties;
-        if ($setAsNew) $this->_new = true;
     }
 
     public static function getIndexField() {
@@ -128,14 +129,14 @@ class Model implements ModelInterface, \JsonSerializable {
     public function setById( $id ) {
         $obj = static::find( [ 'where' => [ static::INDEX => $id ], 'limit' => 1 ] );
         if ( isset( $obj[0] ) ) {
-            $this->setObject( $obj[0] );
+            $this->setObject( $obj[0], false );
         }
     }
 
     public function setRelatedById( $model, $id ) {
         $related = static::findRelated( $model, [ 'where' => [ static::INDEX => $id ], 'limit' => 1 ] );
         if ( isset( $related[0] ) ) {
-            $this->setObject( $related[0] );
+            $this->setObject( $related[0], false );
         }
     }
 
@@ -145,16 +146,30 @@ class Model implements ModelInterface, \JsonSerializable {
                 $this->$field = $modelArray[$field];
             }
         }
-
-        if ( !empty( $this->_properties[static::INDEX] ) ) $this->_new = false;
     }
 
-    protected function set( $modelArray ) {
+    protected function set( $modelArray, $checkIfNew = true ) {
     	$this->_properties = [];
-    	$this->update( $modelArray );
+        $this->update( $modelArray, $checkIfNew );
+
+        $this->setNew($checkIfNew);
     }
 
-    protected function setObject( $model ) {
+    protected function setNew( $checkIfNew = true ) {
+        if ( !empty( $this->_properties[static::INDEX] ) && !$checkIfNew ) {
+            $this->_new = false;
+            return;
+        }
+
+        if ( !empty( $this->_properties[static::INDEX] ) ) {
+            $obj = static::find( [ 'where' => [ static::INDEX => $this->getIndex() ], 'limit' => 1 ] );
+            if ( isset( $obj[0] ) ) {
+                $this->_new = false;
+            }
+        }
+    }
+
+    protected function setObject( $model, $checkIfNew = true ) {
         $this->_properties = [];
         foreach( static::$_fields as $field => $type ) {
             if ( isset( $model->$field ) ) {
@@ -162,7 +177,7 @@ class Model implements ModelInterface, \JsonSerializable {
             }
         }
 
-        if ( !empty( $this->_properties[static::INDEX] ) ) $this->_new = false;
+        $this->setNew($checkIfNew);
     }
 
     public static function find( $query ) {

@@ -14,13 +14,78 @@ class MySQLModel extends Model {
     const INDEX = 'id';
     const COLLECTION = 'model';
 
-    protected static function getConds( $query = null, $prefix = '' ) {
+
+    /*
+    * QUERY:
+    *
+    * ex1:
+    *
+    * [ 'where' => [
+    *   'field' => value,
+    *   'field2' => value2
+    * ]] - field = 'value' AND field2 = 'value2'
+    *
+    * ex2:
+    *
+    * [ 'where' => [
+    *   'field' => ['=' | '<>' | '>' | 'operator', value],
+    * ]] - field =|<>|>|operator 'value'
+    *
+    * ex3:
+    *
+    * [ 'where' => [
+    *   'field' => ['in', [value1, value2...]],
+    * ]] - field IN ('value1', 'value2', ...)
+    *
+    * ex4:
+    *
+    * [ 'where' => [
+    *   'or' => [ex1, ex2, ex3],
+    * ]] - ex1 OR ex2 OR ex3
+    *
+    * ex5:
+    *
+    * [ 'where' => [
+    *   'or' => [ex1, ex2, ['and' => [ex1, ex3]]],
+    * ]] - ex1 OR ex2 OR (ex1 AND ex3)
+    *
+    *
+    * ex6:
+    *
+    * [ 'where' => [
+    *   'or' => [
+    *       ['field' => value],
+    *       ['field' => value2]
+    *   ]
+    * ]] - (field = 'value' OR field = 'value2')
+    *
+    */
+    protected static function getConds( $query = null, $prefix = '', $i = 0 ) {
         $conds = [];
         $binds = [];
-        $i = 0;
 
         if ( is_array( $query ) && !empty( $query['where'] ) ) {
             foreach ( $query['where'] as $key => $val ) {
+                if ( is_array($val) && !is_string($key) ) {
+                    list( $c, $b, $j) = static::getConds([ 'where' => $val ], $prefix, $i);
+                    if (!empty($c)) {
+                        $binds = array_merge($binds, $b);
+                        $conds = array_merge($conds, $c);
+                        $i = $j;
+                    }
+                    continue;
+                }
+
+                if ( is_array($val) ) {
+                    list( $sql, $b, $j) = static::getNestedConds($key, $val, $prefix, $i);
+                    if ($sql) {
+                        $binds = array_merge($binds, $b);
+                        $conds[] = $sql;
+                        $i = $j;
+                    }
+                    continue;
+                }
+
                 if ( array_key_exists( $key, static::$_fields ) ) {
                     $sql = $prefix . $key . ' = :val' . $i;
                     $binds['val' . $i] = $val;
@@ -34,7 +99,43 @@ class MySQLModel extends Model {
             $conds = [ '1' ];
         }
 
-        return [ $conds, $binds ];
+        return [ $conds, $binds, $i ];
+    }
+
+    protected static function getNestedConds( $preKey, $query, $prefix, $i ) {
+        $binds = [];
+        if (
+            is_string($query[0]) &&
+            strtolower($query[0]) == 'in' &&
+            array_key_exists( $preKey, static::$_fields )
+        ) {
+            $vals = [];
+            foreach($query[1] as $val) {
+                $vals[] = ":val{$i}";
+                $binds["val{$i}"] = $val;
+                $i++;
+            }
+            $sql = "{$prefix}{$preKey} IN (" . implode(', ', $vals) . ')';
+            return [$sql, $binds, $i];
+        }
+        if (!empty($preKey) && strtolower($preKey) == 'or') {
+            list( $cons, $binds, $j ) = static::getConds( ['where' => $query ], $prefix, $i );
+            $sql = '(' . implode(' OR ', $cons ) . ')';
+            return [$sql, $binds, $j];
+        }
+        if (!empty($preKey) && strtolower($preKey) == 'and') {
+            list( $cons, $binds, $j ) = static::getConds( ['where' => $query ], $prefix, $i );
+            $sql = '(' . implode(' AND ', $cons ) . ')';
+            return [$sql, $binds, $j];
+        }
+        if (!empty($preKey) && array_key_exists( $preKey, static::$_fields )) {
+            $sql = "{$prefix}{$preKey} {$query[0]} :val{$i}";
+            $binds["val{$i}"] = $query[1];
+            $i++;
+            return [$sql, $binds, $i];
+        }
+
+        return ['', [], $i];
     }
 
     protected static function extendQuery( $query = null, $prefix = '' ) {
@@ -102,7 +203,7 @@ class MySQLModel extends Model {
         $modelClass = static::CLASSNAME;
         $res = [];
         while ( $row = $db->getNext( $result ) ) {
-            $res[] = Container::$modelClass($row);
+            $res[] = Container::$modelClass($row, false);
         }
 
         return $res;
@@ -143,7 +244,7 @@ class MySQLModel extends Model {
         $modelClass = static::CLASSNAME;
         $res = [];
         while ( $row = $db->getNext( $result ) ) {
-            $res[] = Container::$modelClass( $row );
+            $res[] = Container::$modelClass( $row, false );
         }
 
         return $res;
@@ -246,11 +347,19 @@ class MySQLModel extends Model {
         $sql = '';
         foreach (static::$_relations as $model => $relation) {
 
-            $fkTypes = ['n:1', '1<1'];
-            if (!in_array($relation['type'], $fkTypes)) continue;
-            $sql .= "  ADD CONSTRAINT\n";
+            $fkTypes = ['n:1', '1<1', 'n:n'];
+            if (!in_array($relation['type'], $fkTypes) || $relation['skipfk']) continue;
+
+            $fk = [static::NAME . '__' . $relation['index'], $relation['model'] . '__' . $relation['field']];
+            if ($relation['type'] != 'n:n') sort($fk);
+            $fkName = join($fk, '__');
+            $relatedTable = $relation['type'] != 'n:n'
+                ? constant("Phresto\\Modules\\Model\\{$relation['model']}::COLLECTION")
+                : static::COLLECTION;
+
+            $sql .= "  ADD CONSTRAINT {$fkName}\n";
             $sql .= "    FOREIGN KEY ({$relation['index']})\n";
-            $sql .= "      REFERENCES {$relation['model']}({$relation['field']})\n";
+            $sql .= "      REFERENCES {$relatedTable}({$relation['field']})\n";
             if (!empty($relation['dbactions'])) {
                 $sql .= "      {$relation['dbactions']};\n";
             } else {
@@ -259,7 +368,7 @@ class MySQLModel extends Model {
         }
         if (empty($sql)) return '';
 
-        $sql = "ALTER TABLE `" . static::COLLECTION . "` \n" . $sql;
+        $sql = "ALTER TABLE `" . static::COLLECTION . "` DROP FOREIGN KEY IF EXISTS {$fkName};\nALTER TABLE `" . static::COLLECTION . "` \n" . $sql;
         return $sql;
     }
 

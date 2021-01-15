@@ -31,6 +31,21 @@ class Utils {
 		if ( !empty( $file ) && file_exists( $file ) ) {
 			require_once( $file );
 		}
+    }
+
+    public static function libAutoad( $className ) {
+        $base = __DIR__ . '/';
+        $path = str_replace( 'Phresto\\', '', trim( $className, '\\' ) );
+        $path = str_replace( '\\', '/', $path );
+        $file = $base . $path . '.php';
+
+        if ( !empty( $file ) && file_exists( $file ) ) {
+			require_once( $file );
+		}
+    }
+
+    public static function registerLibAutoload() {
+		spl_autoload_register( 'Phresto\\Utils::libAutoad' );
 	}
 
 	public static function registerAutoload() {

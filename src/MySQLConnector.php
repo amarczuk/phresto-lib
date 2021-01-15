@@ -81,6 +81,7 @@ class MySQLConnector extends DBConnector
 
         $this->connection->multi_query( $query );
         while ($this->connection->next_result());
+        return $this->getLastError();
     }
 
     public function query( $query, $bindings = [] ) {
