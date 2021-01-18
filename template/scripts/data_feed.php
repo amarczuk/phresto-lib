@@ -1,17 +1,23 @@
 <?php
 namespace Phresto;
-use Phresto\Modules\Model\profile;
-use Phresto\Modules\Model\user;
-use Phresto\Modules\Model\permission;
 
 require_once(__DIR__ . '/bootstrap.php');
 
-$profiles = json_decode(file_get_contents(__DIR__ . '/profile.json'));
-$permissions = json_decode(file_get_contents(__DIR__ . '/permission.json'));
-$users = json_decode(file_get_contents(__DIR__ . '/user.json'));
+if (empty($argv[2])) {
+  echo "Provide data file name\n\n";
+  die(1);
+}
 
-foreach ($profiles as $profile) {
-    $obj = new profile($profile);
+if (empty($argv[1])) {
+  echo "Provide model name\n\n";
+  die(1);
+}
+
+$data = json_decode(file_get_contents(getcwd() . "{$argv[2]}.json"));
+$model = "Phresto\\Modules\\Model\\{$argv[1]}";
+
+foreach ($data as $d) {
+    $obj = new $model($d);
     try {
         $obj->save();
     } catch(\Exception $e) {
@@ -19,20 +25,5 @@ foreach ($profiles as $profile) {
     }
 }
 
-foreach ($users as $user) {
-    $obj = new user($user);
-    try {
-        $obj->save();
-    } catch(\Exception $e) {
-        echo $e->getMessage() . "\n";
-    }
-}
+echo "done\n";
 
-foreach ($permissions as $permission) {
-    $obj = new permission($permission);
-    try {
-        $obj->save();
-    } catch(\Exception $e) {
-        echo $e->getMessage() . "\n";
-    }
-}

@@ -62,9 +62,9 @@ foreach($toRun as $script) {
   }
   logs("Excecution succesfull");
 
-  $name = $db->escape_string($script->getName());
+  $name = $db->escape($script->getName());
   $time = time();
-  $db->query("INSERT INTO migrations (`date`, `name`) VALUES ({$time}, '{$name}')");
+  $db->query("INSERT INTO migrations (`date`, `name`) VALUES ({$time}, {$name})");
 }
 
 logs("Migrtion finished");
