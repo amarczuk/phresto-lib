@@ -344,8 +344,10 @@ class MySQLModel extends Model {
     }
 
     public static function getRelationCode() {
-        $sql = '';
+        $sqls = [];
+        $fkNames = [];
         foreach (static::$_relations as $model => $relation) {
+            $sql = '';
 
             $fkTypes = ['n:1', '1<1', 'n:n'];
             if (!in_array($relation['type'], $fkTypes) || $relation['skipfk']) continue;
@@ -361,14 +363,19 @@ class MySQLModel extends Model {
             $sql .= "    FOREIGN KEY ({$relation['index']})\n";
             $sql .= "      REFERENCES {$relatedTable}({$relation['field']})\n";
             if (!empty($relation['dbactions'])) {
-                $sql .= "      {$relation['dbactions']};\n";
+                $sql .= "      {$relation['dbactions']}";
             } else {
-                $sql .= "      ON UPDATE CASCADE ON DELETE CASCADE;\n";
+                $sql .= "      ON UPDATE CASCADE ON DELETE CASCADE";
             }
-        }
-        if (empty($sql)) return '';
 
-        $sql = "ALTER TABLE `" . static::COLLECTION . "` DROP FOREIGN KEY IF EXISTS {$fkName};\nALTER TABLE `" . static::COLLECTION . "` \n" . $sql;
+            $sqls[] = $sql;
+            $fkNames[] = "ALTER TABLE `" . static::COLLECTION . "` DROP FOREIGN KEY IF EXISTS {$fkName};";
+        }
+        if (empty($sqls)) return '';
+
+        $sql = implode(",\n", $sqls) . ";\n";
+
+        $sql = implode("\n", $fkNames) . "\nALTER TABLE `" . static::COLLECTION . "` \n" . $sql;
         return $sql;
     }
 

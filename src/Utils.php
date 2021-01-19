@@ -81,7 +81,7 @@ class Utils {
 
 		foreach ( $modules as $module ) {
 			foreach ( $types as $type ) {
-				$files = $getFiles( $base . $module . '/' . $type . '/' );
+				$files = $getFiles( $base . $module . '/' . strtolower($type) . '/' );
 				$config[$module][$type] = $files;
 			}
 		}
