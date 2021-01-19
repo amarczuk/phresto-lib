@@ -7,6 +7,7 @@ class MySQLConnector extends DBConnector
 {
 
     const CLASSNAME = __CLASS__;
+    protected static $_types = [];
 
     public function connect( $options ) {
         $db = @Container::mysqli( $options['host'], $options['user'], $options['passwd'], $options['dbname'] );
@@ -112,4 +113,23 @@ class MySQLConnector extends DBConnector
         return $this->connection->error;
     }
 
+    public function getFields( $table ) {
+        $res = $this->query("SELECT * FROM {$table} LIMIT 1");
+        $fs = $res->fetch_fields();
+        $fields = [];
+        foreach($fs as $field) {
+            $fields[$field->name] = static::typeFromId($field->type);
+        }
+        return $fields;
+    }
+
+    public static function typeFromId( $type_id ) {
+        if (empty(static::$_types)) {
+            static::$_types = array();
+            $constants = get_defined_constants(true);
+            foreach ($constants['mysqli'] as $c => $n) if (preg_match('/^MYSQLI_TYPE_(.*)/', $c, $m)) static::$_types[$n] = $m[1];
+        }
+
+        return array_key_exists($type_id, static::$_types)? static::$_types[$type_id] : NULL;
+    }
 }

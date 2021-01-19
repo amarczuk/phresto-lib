@@ -14,7 +14,6 @@ class MySQLModel extends Model {
     const INDEX = 'id';
     const COLLECTION = 'model';
 
-
     /*
     * QUERY:
     *
@@ -328,19 +327,57 @@ class MySQLModel extends Model {
     }
 
     public static function getCreationCode() {
-        $sql = "CREATE TABLE IF NOT EXISTS `" . static::COLLECTION . "` (\n";
+        $db = MySQLConnector::getInstance( static::DB );
+        $new = true;
+        $newCols = [];
+        $dropCols = [];
+        $modelFields = static::getFields();
+        try {
+            $fields = $db->getFields( static::COLLECTION );
+            $new = false;
+            foreach($fields as $name => $type) {
+                if (!in_array($name, $modelFields)) {
+                    $dropCols[] = $name;
+                }
+            }
+            foreach($modelFields as $field) {
+                if (!array_key_exists($field, $fields)) {
+                    $newCols[] = $field;
+                }
+            }
+        } catch(\Exception $e) {
+            // table does not exist
+        }
+
+        $sql = $new
+            ? "CREATE TABLE IF NOT EXISTS `" . static::COLLECTION . "` (\n"
+            : "ALTER TABLE `" . static::COLLECTION . "` \n";
+
         foreach (static::$_fields as $field => $type) {
             $sqlType = static::getSqlType($type);
-            $sql .= "  `{$field}` {$sqlType}";
-            if ($field == static::INDEX) {
-                if ($sqlType == 'INT') {
-                    $sql .= ' AUTO_INCREMENT';
+            $add = in_array($field, $newCols);
+            $drop = in_array($field, $dropCols);
+            if (!$new && $add) {
+                $sql .= "  ADD COLUMN ";
+            } else if (!$new && $drop) {
+                $sql .= "  DROP COLUMN ";
+            } else if (!$new) {
+                $sql .= "  MODIFY COLUMN ";
+            }
+
+            $sql .= "  `{$field}`";
+            if (!$drop) {
+                $sql .= " {$sqlType}";
+                if ($field == static::INDEX) {
+                    if ($sqlType == 'INT') $sql .= ' AUTO_INCREMENT';
+                    if ($new) $sql .= ' PRIMARY KEY';
                 }
-                $sql .= ' PRIMARY KEY';
             }
             $sql .= ",\n";
         }
-        return trim($sql, ",\n") . "\n) ENGINE=INNODB;\n";
+        $sql = trim($sql, ",\n");
+        $sql .= $new ? "\n) ENGINE=INNODB;\n" : ";\n";
+        return $sql;
     }
 
     public static function getRelationCode() {
@@ -350,7 +387,7 @@ class MySQLModel extends Model {
             $sql = '';
 
             $fkTypes = ['n:1', '1<1', 'n:n'];
-            if (!in_array($relation['type'], $fkTypes) || $relation['skipfk']) continue;
+            if (!in_array($relation['type'], $fkTypes) || !empty($relation['skipfk'])) continue;
 
             $fk = [static::NAME . '__' . $relation['index'], $relation['model'] . '__' . $relation['field']];
             if ($relation['type'] != 'n:n') sort($fk);
@@ -400,5 +437,4 @@ class MySQLModel extends Model {
                 return mb_strtoupper($type);
         }
     }
-
 }
