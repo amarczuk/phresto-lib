@@ -208,6 +208,13 @@ class MySQLModel extends Model {
         return $res;
     }
 
+    public static function findOne($query = null) {
+        $query['limit'] = 1;
+        $res = static::find( $query );
+
+        return !empty($res) && !empty($res[0]) ? $res[0] : null;
+    }
+
     public static function findRelated( Model $model, $query = null ) {
         if ( !static::isRelated( $model->getName() ) || empty( $model->getIndex() ) ) {
             throw new RequestException( LAN_HTTP_BAD_REQUEST, 400 );

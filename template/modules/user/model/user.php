@@ -72,26 +72,15 @@ class user extends MySQLModel {
             $route = $class . '/' . $tmp[0];
             $method = $tmp[1];
         }
-        $permission = permission::find( [ 'where' => ['profile' => $this->profile, 'route' => $route, 'method' => $method ] ] );
-        if (empty($permission) || empty($permission[0])) {
-            $permission = permission::find( [ 'where' => ['profile' => $this->profile, 'route' => $route, 'method' => '*' ] ] );
-        }
-        if (empty($permission) || empty($permission[0])) {
-            if ($route !== $class) {
-                $route = "{$class}/*";
-            } else {
-                $route = '*';
-            }
-            $permission = permission::find( [ 'where' => ['profile' => $this->profile, 'route' => $route, 'method' => $method ] ] );
-        }
-        if (empty($permission) || empty($permission[0])) {
-            $permission = permission::find( [ 'where' => ['profile' => $this->profile, 'route' => $route, 'method' => '*' ] ] );
-        }
-        if (empty($permission) || empty($permission[0]) && $route !== '*') {
-            $permission = permission::find( [ 'where' => ['profile' => $this->profile, 'route' => '*', 'method' => '*' ] ] );
-        }
+        $permission = permission::find( [
+            'where' => [
+                'profile' => $this->profile,
+                'route' => ['in', [$route, '*', "{$class}/*"]],
+                'method' => ['in', [$method, '*']]
+            ]
+        ] );
 
-        return ( !empty( $permission ) && !empty( $permission[0] ) && $permission[0]->getIndex() && $permission[0]->allow === true );
+        return ( !empty( $permission ) && !empty( $permission[0] ) && $permission[0]->allow === true );
     }
 
     protected static function passHash( $password ) {

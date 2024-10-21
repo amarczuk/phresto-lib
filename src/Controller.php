@@ -9,6 +9,13 @@ class Controller {
 
 	const CLASSNAME = __CLASS__;
 
+    /**
+     * array describing how to map route parameters (aka path) to method parameters
+     *
+     * ['method_name' => [ 'param_name' => path index, ... ], ... ]
+     *
+     * ['all' => ...] will be used for all methods
+     */
 	protected $routeMapping = [];
 	protected $queryDescription = [];
 
@@ -88,7 +95,8 @@ class Controller {
 		try {
 			return $method->invokeArgs( $this, $args );
 		} catch ( \TypeError $error ) {
-			throw new Exception\RequestException( LAN_HTTP_BAD_REQUEST, 400 ); 
+            error_log( $error->getMessage() );
+			throw new Exception\RequestException( LAN_HTTP_BAD_REQUEST, 400 );
 		}
 	}
 
@@ -112,7 +120,7 @@ class Controller {
 	}
 
 	/**
-	 * @param ReflectionParameter $parameter
+	 * @param \ReflectionParameter $parameter
 	 * @return string|null
 	 */
 	protected static function getParamType( \ReflectionParameter $parameter ) {
@@ -170,19 +178,19 @@ class Controller {
 
 		$requestTypes = [ 'get', 'post', 'patch', 'put', 'delete', 'head' ];
 		$endpoints = [];
-		
+
 		$tmp = explode( '\\', ( isset( $className ) ) ? $className : static::CLASSNAME );
 		$classNameOnly = array_pop( $tmp );
 
 		$methodTypes = ( $all ) ? \ReflectionMethod::IS_PUBLIC | \ReflectionMethod::IS_PROTECTED : \ReflectionMethod::IS_PUBLIC;
 
 		$classMethods = $reflection->getMethods( $methodTypes );
-		$staticProps = $reflection->getDefaultProperties(); 
+		$staticProps = $reflection->getDefaultProperties();
 		$fields = $staticProps['routeMapping'];
 
 		foreach ( $classMethods as $method ) {
-			if ( !in_array( $method->name, $requestTypes ) && 
-				 !( strpos( $method->name, '_' ) !== false && 
+			if ( !in_array( $method->name, $requestTypes ) &&
+				 !( strpos( $method->name, '_' ) !== false &&
 				 	in_array( substr( $method->name, strpos( $method->name, '_' ) + 1 ), $requestTypes )
 				  )
 				) continue;
@@ -192,7 +200,7 @@ class Controller {
 			$ignore = [];
 
 			$routeMapping = [];
-			if ( !empty( $fields[$method->name] ) && is_array( $fields[$method->name] ) ) {
+			if ( isset( $fields[$method->name] ) && is_array( $fields[$method->name] ) ) {
 				$routeMapping = $fields[$method->name];
 			} else if ( !empty( $fields['all'] ) && is_array( $fields['all'] ) ) {
 				$routeMapping = $fields['all'];

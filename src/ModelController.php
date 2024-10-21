@@ -40,6 +40,7 @@ class ModelController extends Controller {
 		try {
 			return $method->invokeArgs( $this, $args );
 		} catch ( \TypeError $error ) {
+            error_log( $error->getMessage() );
 			throw new Exception\RequestException( LAN_HTTP_BAD_REQUEST, 400 );
 		}
 	}
@@ -130,7 +131,8 @@ class ModelController extends Controller {
 
 		$relatedModels = $staticProps['_relations'];
 		$endpoints = [];
-		foreach ( $relatedModels as $model => $relation ) {
+		foreach ( $relatedModels as $name => $relation ) {
+            $model = $relation['model'];
 			$paths = ModelController::discover( false, "\\Phresto\\Modules\\Model\\{$model}", false );
 			$modelDiscovery = $getModelDisc( $paths, $model );
 			if ( empty( $modelDiscovery ) || empty( $modelDiscovery['methods'] ) ) {

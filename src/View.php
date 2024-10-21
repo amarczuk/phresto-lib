@@ -56,11 +56,17 @@ class View {
 			self::$lang = $this->config['page']['lang'];
 		}
 	}
-	
+
+    /**
+     * @deprecated
+     */
 	public function addJs( $data ) {
 		$this->addScript( 'inline_js', $data );
 	}
 
+    /**
+     * @deprecated
+     */
 	public function add( $template, $data, $module = null ) {
 
 		if ( $template == '' ) return false;
@@ -76,7 +82,7 @@ class View {
 				require_once( 'lang/' . self::$lang . '.php' );
 			}
 		}
-		
+
 		if ( $template == 'inline' ) {
 			array_push( $this->elements, [ 'inline' => true, 'content' => $data ] );
 			return true;
@@ -87,30 +93,33 @@ class View {
 		if ( !empty( $module ) ) {
 			$path = 'modules/' . $module . '/view/';
 		}
-		
+
 		if ( !is_file( $path . $template . '.htm' ) ) {
 			if ( empty( $module ) ) return false;
 			$path = 'view/';
 			if ( !is_file( $path . $template . '.htm' ) ) return false;
 		}
-		
+
 		foreach ($data as $key => $value) {
 			if ( is_array( $value ) || is_object( $value ) ) {
 				$data[$key] = json_encode( $value );
 			}
 		}
-		
+
 		array_push( $this->elements, [ 'file' => $path . $template . '.htm', 'data' => $data, 'path' => $path ] );
-		
+
 		return true;
 	}
-	
+
+    /**
+     * @deprecated
+     */
 	function addScript( $file, $data = '', $module = null ) {
 		if ( empty( $file ) && empty( $data ) ) return false;
-		
+
 		if ( $file == 'inline_js' ) {
 			if ( empty( $data ) ) return false;
-		
+
 			$data="\n<script type='text/javascript'>\n<!--\n{$data}\n//-->\n</script>\n";
 			$this->add( 'inline', $data );
 			return true;
@@ -118,7 +127,7 @@ class View {
 
 		if ( $file == 'inline_url' ) {
 			if ( empty( $data ) ) return false;
-		
+
 			$this->add( 'inline', "\n<script type='text/javascript' src='//{$data}'></script>\n" );
 			return true;
 		}
@@ -130,29 +139,31 @@ class View {
 		}
 
 		if ( $file == 'inline_file' ) {
-			
+
 			if ( empty( $data ) || !is_file( $path . $data ) )  return false;
-			
+
 			$data = "\n<script type='text/javascript' src='/{$path}{$data}'></script>\n";
-			
+
 			$this->add( 'inline', $data );
 			return true;
 		}
-		
+
 		if ( !is_file( $path . $file ) )  return false;
-	
+
 		array_push( $this->javascript, array( 'file' => $path . $file, 'content' => '' ) );
-		
+
 		return true;
 	}
-	
-	
+
+    /**
+     * @deprecated
+     */
 	public function addCss( $file, $data='', $module = null ) {
 		if ( empty( $file ) && empty( $data ) ) return false;
-		
+
 		if ( $file == 'inline_css' ) {
 			if ( $data == '' ) return false;
-		
+
 			$this->add( 'inline', "\n<style>\n{$data}\n</style>\n" );
 			return true;
 		}
@@ -171,39 +182,39 @@ class View {
 		}
 
 		if ( $file == 'inline_file' ) {
-			
+
 			if ( empty( $data ) || !is_file( $path . $data ) ) return false;
-			
+
 			$this->add( 'inline',"\n<link rel='stylesheet' href='/{$path}{$data}'>\n" );
 			return true;
 		}
 
-		
+
 		if ( !is_file( $path . $file ) )  return false;
-	
+
 		array_push( $this->style, array( 'file' => $path . $file, 'content' => '' ) );
-		
+
 		return true;
-	
+
 	}
-	
+
 	public function get( $continue = true ) {
 		if ( !$this->flushed || !$continue ) {
 		    $out = $this->getHead();
         }
-		
+
         $elements = [];
         $c = count( $this->elements );
         $j = ( $continue ) ? 0 : $this->flush_no;
-        
+
         for ( $i = $j; $i < $c; $i++ ) {
             $elements[$i] = $this->elements[$i];
         }
-		
+
 		foreach ( $elements as $element ) {
 			$out .= self::render( $element );
 		}
-		
+
 		$out .= $this->closingJS();
 
 		$debug = ob_get_contents();
@@ -223,7 +234,7 @@ class View {
 		}
 		return $out;
 	}
-	
+
 	private function closingJS() {
 		if ( !is_array( $this->config['closingjs'] ) ) return '';
 		$out = '';
@@ -239,50 +250,52 @@ class View {
 		$text = str_replace( $bom, '', $text );
 		return $text;
 	}
-    
+
     public function getFlush() {
-		
+
         if ( !$this->flushed ) {
-            
+
             header("Content-Type: text/html; charset={$this->config['page']['charset']}");
-        
+
             $out = $this->getHead();
             $this->flushed = true;
         }
-        
+
         $elements = [];
         $c = count( $this->elements );
         for ( $i = $this->flush_no; $i < $c; $i++ ) {
             $elements[$i] = $this->elements[$i];
         }
-        
+
         $this->flush_no = $i;
-        
+
         foreach ( $elements as $element ) {
             $out .= self::render( $element );
         }
-                                                                
+
         echo $out;
-                        
+
         ob_flush();
-        flush();     
+        flush();
     }
-    
-	
+
+    /**
+     * @deprecated
+     */
 	public static function render( $element ) {
-		
+
 		if ( !empty( $element['inline'] ) ) {
-			$data = $element['content'];			
+			$data = $element['content'];
 		} else {
 			$data = file_get_contents( $element['file'] );
 		}
-		
+
 		// insert other views {? insert(xxxxx) ?}
-		
+
 		$tochange = [];
 		$pattern = '#\{\?[\s]*insert\((?P<insert>[^\)]*)\)[\s]*\?\}#iU';
 		$cnt = preg_match_all( $pattern, $data, $tochange );
-	
+
 		for ( $i = 0; $i < $cnt; $i++ ) {
 			$file = $tochange['insert'][$i];
 			if ( mb_strpos( $file, '$' ) === 0 && isset( $element['data'][ trim( $file, '$ ' ) ] ) ) {
@@ -290,29 +303,29 @@ class View {
 			}
 			$data = str_replace( $tochange[0][$i], "\n" . trim( self::insert( $file, $element['path'], 0, $element['data'] ) )."\n", $data );
 		}
-		
-		
+
+
 		// replace constants {? CONSTANT ?}
-		
+
 		$tochange = [];
 		$pattern = '#\{\?[\s]*(?P<const>[\w\d_]*)[\s]*\?\}#i';
 		$cnt = preg_match_all( $pattern, $data, $tochange );
-		
+
 		for ( $i = 0; $i < $cnt; $i++ ) {
 			$data = str_replace( $tochange[0][$i], @constant( $tochange['const'][$i] ), $data );
 		}
-		
+
 		// add loops {? repeat($variable) ?} i {? /repeat ?}
-		
+
 		$data = preg_replace( '#\{\?([\s]*)\/repeat([\s]*)\?\}#i', '{?/repeat?}', $data );
-		
+
 		$tochange = [];
 		$pattern = '#\{\?[\s]*repeat\(\$(?P<variable>[^\)]*)\)[\s]*\?\}#isU';
 		preg_match_all( $pattern, $data, $tochange );
-       
+
        	$cnt = count( $tochange[0] );
 		$last_poz = 0;
-		
+
 		for ( $i = 0; $i < $cnt; $i++ ) {
 			$from = mb_strpos( $data, $tochange[0][$i] );
 			$to1 = mb_strpos( $data, '{?/repeat?}' ) + 11;
@@ -324,17 +337,17 @@ class View {
 				$k = $i;
 				$next = $to1;
 			}
-            
+
             if ($k <= $cnt && $next > $to1 && $next > $from ) {
                 $k--;
             }
-				
+
 			while ( $k < $cnt && $next < $to1 && $next > $from ) {
 				$data = "\n" . trim( self::repeats( $data, $k, $cnt, $tochange, $next, $element ) ) . "\n";
-				
+
 				$to1 = mb_strpos( $data, '{?/repeat?}' ) + 11;
 				$to = $to1 - $from;
-				
+
 				$k++;
 				if ($k <= $cnt) {
 					$next = mb_strpos( $data, $tochange[0][$k] );
@@ -342,64 +355,64 @@ class View {
 					$k--;
 					$next = $to1;
 				}
-                
+
                 if ( $k <= $cnt && $next > $to1 && $next > $from ) {
                     $k--;
                 }
 			}
-			
+
 			$to = $to1 - $from;
-			
+
 			$repeat = str_replace( [ '{?/repeat?}', $tochange[0][$i] ], '', mb_substr( $data, $from, $to ) );
-			
+
 			$tochange2 = [];
 			$pattern = '#\{\?[\s]*\$' . $tochange['variable'][$i] . '\[(?P<variable>[^\]]*)\][\s]*\?\}#i';
 			$cnt2 = preg_match_all($pattern, $repeat, $tochange2);
-			
+
 			$variable = $element['data'][$tochange['variable'][$i]];
 			$full_data = '';
-			
+
 			if ( count( $variable ) > 0 ) {
 				foreach ( $variable as $key => $var ) {
-					
+
 					$full_data1 = $repeat;
-					
+
 					for ( $j = 0; $j < $cnt2; $j++ ) {
-						$full_data1 = str_replace( $tochange2[0][$j], $var[$tochange2['variable'][$j]], $full_data1 );	
+						$full_data1 = str_replace( $tochange2[0][$j], $var[$tochange2['variable'][$j]], $full_data1 );
 					}
-					
+
 					$full_data .= $full_data1;
 				}
 			}
-			
+
 			$data = mb_substr( $data, 0, $from) . $full_data . mb_substr( $data, $to1 );
-			
+
 			$i = $k;
 		}
-		
+
 		// replace variables {? $variable ?}
-		
+
 		$tochange = [];
 		$pattern = '#\{\?[\s]*\$(?P<variable>[\w\d_]*)[\s]*\?\}#i';
 		$cnt = preg_match_all( $pattern, $data, $tochange );
-		
+
 		for ( $i = 0; $i < $cnt; $i++ ) {
 			$data = str_replace( $tochange[0][$i], $element['data'][$tochange['variable'][$i]], $data );
 		}
 
 		// replace conditions {? if(text1=text) ?} i {? /if ?}
-		
+
 		$data = preg_replace( '#\{\?([\s]*)\/if([\s]*)\?\}#i', '{?/if?}', $data );
-		
+
 		$tochange = [];
 		$pattern = '#\{\?[\s]*if[\s]*\((?P<left>[^=]*)=(?P<right>[^\)]*)\)[\s]*\?\}(?P<content>.*)\{\?/if\?\}#isU';
 		$cnt = preg_match_all( $pattern, $data, $tochange );
-      
+
 		for ( $i = 0; $i < $cnt; $i++ ) {
 			$left = trim( $tochange['left'][$i], '$ ' );
 			if ( ( isset( $element['data'][$left] ) && $element['data'][$left] == trim( $tochange['right'][$i] ) )
 				||
-			     ( $tochange['left'][$i] == $tochange['right'][$i] ) 
+			     ( $tochange['left'][$i] == $tochange['right'][$i] )
 			   ) {
 				$data = str_replace( $tochange[0][$i], $tochange['content'][$i], $data );
 			} else {
@@ -411,12 +424,12 @@ class View {
 	}
 
 	private static function repeats( $data, &$k, $cnt, $change, $next, $element )	{
-			
+
 		$from = $next;
 		$to1 = mb_strpos( $data, '{?/repeat?}' ) + 11;
-		
+
 		$to1 = $k;
-		
+
 		$k++;
 		if ( $k < $cnt ) {
 			$next = mb_strpos( $data, $change[0][$k], $from );
@@ -424,12 +437,12 @@ class View {
 			$k = $i;
 			$next = $to1;
 		}
-		
+
 		while ( $k < $cnt && $next < $to1 && $next > 0 ) {
 			$data = "\n" . trim( self::repeats( $data, $k, $cnt, $change, $next, $element ) ) . "\n";
 			$to1 = mb_strpos( $data, '{?/repeat?}' ) + 11;
 			$to = $to1 - $from;
-			
+
 			$k++;
 			if ( $k <= $cnt ) {
 				$next = mb_strpos( $data, $change[0][$k] );
@@ -438,32 +451,32 @@ class View {
 				$next = $to1;
 			}
 		}
-		
+
 		$to = $to1 - $from;
-		
+
 		$repeat = str_replace( ['{?/repeat?}', $change[0][$i]], '', mb_substr( $data, $from, $to ) );
-		
+
 		$change2 = [];
 		$pattern = '#\{\?[\s]*\$' . $change['variable'][$i] . '\[(?P<variable>[^\]]*)\][\s]*\?\}#i';
 		$cnt2 = preg_match_all( $pattern, $repeat, $change2 );
-		
+
 		$variable = $element['dane'][$change['variable'][$i]];
 		$full_data = '';
-		
+
 		if ( count( $variable ) > 0 ) {
 			foreach ( $variable as $key => $var ) {
-				
+
 				$full_data1 = $repeat;
-				
+
 				for ( $j = 0; $j < $cnt2; $j++ ) {
-					$full_data1 = str_replace( $change2[0][$j], $var[$change2['variable'][$j]], $full_data1 )."\n";	
+					$full_data1 = str_replace( $change2[0][$j], $var[$change2['variable'][$j]], $full_data1 )."\n";
 				}
-				
+
 				$full_data .= $full_data1;
-				
+
 			}
 		}
-		
+
 		$data = mb_substr( $data, 0, $from ) . $full_data . mb_substr( $data, $to1 );
 
 		return $data;
@@ -472,9 +485,9 @@ class View {
 	private static function insert( $template, $path, $z, $data )
 	{
 		if ( $z == 100 ) return '';
-	
+
 		$file = $path . $template . '.htm';
-		if ( !is_file( $file ) ) 
+		if ( !is_file( $file ) )
 		{
 			$path = 'view/';
 			$file = $path . $template . '.htm';
@@ -485,13 +498,13 @@ class View {
 				if ( !is_file( $file ) ) return '';
 			}
 		}
-		
+
 		$data = file_get_contents( $file );
-		
+
 		$tochange = [];
 		$pattern = '#\{\?[^i]*insert\((?P<insert>[^\)]*)\)[^\?]*\?\}#iU';
 		$cnt = preg_match_all( $pattern, $data, $tochange );
-		
+
 		for ( $i = 0; $i < $cnt; $i++ )	{
 			$file = $tochange['insert'][$i];
 			if ( mb_strpos( $file, '$' ) === 0 && isset( $data[ trim( $file, '$ ' ) ] ) ) {
@@ -499,26 +512,29 @@ class View {
 			}
 			$data = str_replace( $tochange[0][$i], "\n".trim( self::insert( $tochange['insert'][$i], $path, $z+1, $data ) )."\n", $data );
 		}
-		
+
 		return $data;
-	
+
 	}
 
+    /**
+     * @deprecated
+     */
 	private function getHead() {
-	
+
 		$head = "<!DOCTYPE {$this->config['page']['doctype']}>\n";
 		$head .= "<html>\n";
 		$head .= "<head>\n";
-		
+
 		$head .= "\t<title>{$this->config['page']['title']}</title>\n";
 		$head .= "\t<meta http-equiv=\"Content-Type\" content=\"text/html; charset={$this->config['page']['charset']}\">\n";
-		
+
 		if ( isset( $this->config['cache'] ) && is_array( $this->config['cache'] ) ) {
 			foreach( $this->config['cache'] as $key => $var ) {
 				$head .= "\t<meta http-equiv=\"{$key}\" content=\"{$var}\">\n";
 			}
 		}
-		
+
 		if ( isset( $this->config['headers'] ) && is_array( $this->config['headers'] ) ) {
 			foreach( $this->config['headers'] as $key => $var ) {
 				if ($key == 'base') {
@@ -527,13 +543,13 @@ class View {
 				$head.="\t<meta name=\"{$key}\" content=\"{$var}\">\n";
 			}
 		}
-		
+
 		if ( isset( $this->config['rss'] ) && is_array( $this->config['rss'] ) ) {
 		    foreach ( $this->config['rss'] as $file => $title ) {
                 $head.="\t<link rel=\"alternate\" type=\"application/rss+xml\" title=\"{$title}\" href=\"/{$file}\">\n";
 		    }
 		}
-		
+
 		if ( !empty( $this->config['page']['favicon'] ) ) {
 			$head.="\t<link rel=\"icon\" href=\"/{$this->config['page']['favicon']}\" type=\"image/x-icon\">\n";
 		}
@@ -549,46 +565,46 @@ class View {
 				$head.="\t<link rel=\"stylesheet\" href=\"{$var['file']}\" type=\"text/css\">\n";
 			} else if ( !empty( $var['content'] ) )	{
 				$head.="\t<style type=\"text/css\">\n";
-				
+
 				$tmp = explode( "\n", $var['content'] );
-				
+
 				foreach ( $tmp as $v ) {
 					$head .= "\t\t{$v}\n";
 				}
-				
+
 				$head .= "\t</style>\n";
 			}
 		}
-	
+
 		if ( isset( $this->config['js'] ) && is_array( $this->config['js'] ) ) {
 		    foreach ( $this->config['js'] as $key => $val ) {
 				$head.="\t<script type='text/javascript' src=\"{$val}\"></script>\n";
 			}
 		}
-		
+
 		foreach( $this->javascript as $key => $var) {
 			if ( !empty( $var['file'] ) ) {
 				$head .= "\t<script type='text/javascript' src=\"/{$var['file']}\"></script>\n";
 			} else if ( !empty( $var['content'] ) ) {
 				$head .= "\t<script type=\"text/javascript\">\n\t<!--\n";
-				
+
 				$tmp = explode("\n", $var['content'] );
-				
+
 				foreach ( $tmp as $v ) {
 					$head .= "\t\t{$v}\n";
 				}
-				
+
 				$head.="\t//-->\n\t</style>\n";
 			}
 		}
-		
+
 		if ( isset( $this->config['customhead'] ) && is_array( $this->config['customhead'] ) ) {
 			foreach( $this->config['customhead'] as $key => $var)
 			{
 				$head .= "\n{$var}\n";
 			}
 		}
-		
+
 		$head .= "\n</head>\n<body";
 		if ( isset( $this->config['body'] ) && is_array( $this->config['body'] ) ) {
 			foreach( $this->config['body'] as $key => $var)
@@ -597,17 +613,23 @@ class View {
 			}
 		}
 		$head .= ">\n\n";
-	
+
 		return $head;
 	}
-	
+
+    /**
+     * @deprecated
+     */
 	public function debug( $data ) {
 		$this->add( 'inline', '<div class="debug-output">'.str_replace('<', '&lt;', print_r($data, true)).'</div>' );
 	}
 
+    /**
+     * @deprecated
+     */
     public static function closeTags( $html, $tags ) {
     	$excluded = ['br','img','hr','meta','link'];
-    	
+
     	foreach( $tags as $tag ) {
     		if ( in_array( $tag, $excluded ) ) continue;
 

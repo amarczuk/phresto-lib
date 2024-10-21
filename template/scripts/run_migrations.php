@@ -56,7 +56,7 @@ foreach($toRun as $script) {
   logs("Running {$script->getName()}");
   try {
     $script->run($db);
-  } catch (Exception $e) {
+  } catch (\Exception $e) {
     logs("Error: {$e->getMessage()}");
     die(1);
   }

@@ -81,11 +81,10 @@ class Utils {
 
 		foreach ( $modules as $module ) {
 			foreach ( $types as $type ) {
-				$files = $getFiles( $base . $module . '/' . strtolower($type) . '/' );
+                $files = $getFiles( $base . $module . '/' . strtolower($type) . '/' );
 				$config[$module][$type] = $files;
 			}
-		}
-
+        }
 
 		Config::saveConfig( 'modules', $config );
     }

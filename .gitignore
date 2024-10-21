@@ -7,6 +7,8 @@
 node_modules/
 dist/
 .build/
+.vscode/
+vendor/
 
 # Compiled Java class files
 *.class

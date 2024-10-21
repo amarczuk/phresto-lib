@@ -9,17 +9,17 @@ class Router {
 
 	public static function route() {
 		$reqType = mb_strtolower( $_SERVER['REQUEST_METHOD'] );
-    $route = explode( '/', trim( $_GET['PHRESTOREQUESTPATH'], '/' ) );
-    $class = array_shift( $route );
-    $query = $_GET;
-    unset( $query['PHRESTOREQUESTPATH'] );
-    $bodyRaw = '';
-    $body = [];
-    $headers = static::getRequestHeaders();
+        $route = explode( '/', trim( $_GET['PHRESTOREQUESTPATH'], '/' ) );
+        $class = array_shift( $route );
+        $query = $_GET;
+        unset( $query['PHRESTOREQUESTPATH'] );
+        $bodyRaw = '';
+        $body = [];
+        $headers = static::getRequestHeaders();
 		$viewConf = Config::getConfig( 'app' );
 
 		$origin = (is_array($viewConf['app']) && array_key_exists('cors', $viewConf['app'])) ? $viewConf['app']['cors'] : null;
-		if ($origin == '*') {
+		if ($origin == '*' && !empty($_SERVER['HTTP_ORIGIN'])) {
 			$origin = $_SERVER['HTTP_ORIGIN'];
 		}
 
@@ -37,6 +37,7 @@ class Router {
 		if (!empty($origin)) {
 			header("Access-Control-Allow-Origin: {$origin}");
 			header("Access-Control-Allow-Credentials: true");
+			header('Access-Control-Allow-Headers: *');
 		}
 
 		if ( $reqType != 'get' && $reqType != 'delete' ) {
@@ -80,6 +81,10 @@ class Router {
 	}
 
 	protected static function getRequestHeaders() {
+        if ( function_exists('apache_request_headers') ) {
+            return apache_request_headers();
+        }
+
 	    $headers = array();
 	    foreach( $_SERVER as $key => $value ) {
 	        if ( substr( $key, 0, 5 ) != 'HTTP_' ) {

@@ -1,222 +1,236 @@
 <?php
 
-if ( !is_dir( getcwd() . DIRECTORY_SEPARATOR . 'vendor' ) ) {
-	echo "\n\nPlease run Phresto CLI from root folder of your project!\n\n";
-	die(1);
+if (!is_dir(getcwd() . DIRECTORY_SEPARATOR . 'vendor')) {
+    echo "\n\nPlease run Phresto CLI from root folder of your project!\n\n";
+    die(1);
 }
 
-define( 'PHRESTO_ROOT', getcwd() );
+define('PHRESTO_ROOT', getcwd());
 
 require_once getPath([getcwd(), 'vendor', 'autoload.php']);
 
 $functions = [
-	'--new/-n' => [ 'func' => 'newone', 'desc' => 'Creates empty Phresto project with built-in modules' ],
-	'--upgrade/-up' => [ 'func' => 'upgrade', 'desc' => 'Updates Phresto project and built-in modules (preserves configs)' ],
-	'--install/-i [name]' => [ 'func' => 'install', 'desc' => 'Install module (composer package name required)' ],
-	'--update/-u [name]' => [ 'func' => 'update', 'desc' => 'Update module (composer package name required)' ],
-	'--modules/-m' => [ 'func' => 'updatemodulesini', 'desc' => 'Updates/creates conf/modules.ini' ],
-	'--help/-h' => [ 'func' => 'help', 'desc' => 'Prints help information' ]
+    '--new/-n' => ['func' => 'newone', 'desc' => 'Creates empty Phresto project with built-in modules'],
+    '--upgrade/-up' => ['func' => 'upgrade', 'desc' => 'Updates Phresto project and built-in modules (preserves configs)'],
+    '--install/-i [name]' => ['func' => 'install', 'desc' => 'Install module (composer package name required)'],
+    '--update/-u [name]' => ['func' => 'update', 'desc' => 'Update module (composer package name required)'],
+    '--modules/-m' => ['func' => 'updatemodulesini', 'desc' => 'Updates/creates conf/modules.ini'],
+    '--help/-h' => ['func' => 'help', 'desc' => 'Prints help information']
 ];
 
 $run = 0;
 foreach ($functions as $key => $value) {
-	$keys = explode('/', $key);
-	if (in_array($keys[0], $argv) || in_array($keys[1], $argv)) {
-		$value['func'](in_array($keys[0], $argv) ? $keys[0] : $keys[1]);
-		$run++;
-	}
+    $keys = explode('/', $key);
+    if (in_array($keys[0], $argv) || in_array($keys[1], $argv)) {
+        $value['func'](in_array($keys[0], $argv) ? $keys[0] : $keys[1]);
+        $run++;
+    }
 }
 if ($run == 0) {
-	help('');
-};
+    help('');
+}
+;
 
-function install($key) {
-	$pos = array_search($key, $argv) + 1;
-	if (empty($argv[$pos]) || mb_strpos('/', $argv[$pos]) === false) {
-		echo "Wrong module name.\n";
-		return;
-	}
-	$module = $argv[$pos];
-	if (is_dir(getPath([PHRESTO_ROOT, 'vendor', $module]))) {
-		echo "Module is already installed. Please use option -u instead.\n";
-		return;
-	}
-	echo "Installing module {$module}...\n";
-	passthru("composer install {$module}");
-	if (!is_dir(getPath([PHRESTO_ROOT, 'vendor', $module]))) {
-		echo "Module was not installed correctly.\n";
-		return;
-	}
-	copyDir(getPath([PHRESTO_ROOT, 'vendor', $module, 'modules']), getPath(PHRESTO_ROOT, 'modules'));
-	
-	echo "Module {$module} has been installed.\n";
+function install($key)
+{
+    $pos = array_search($key, $argv) + 1;
+    if (empty($argv[$pos]) || mb_strpos('/', $argv[$pos]) === false) {
+        echo "Wrong module name.\n";
+        return;
+    }
+    $module = $argv[$pos];
+    if (is_dir(getPath([PHRESTO_ROOT, 'vendor', $module]))) {
+        echo "Module is already installed. Please use option -u instead.\n";
+        return;
+    }
+    echo "Installing module {$module}...\n";
+    passthru("composer install {$module}");
+    if (!is_dir(getPath([PHRESTO_ROOT, 'vendor', $module]))) {
+        echo "Module was not installed correctly.\n";
+        return;
+    }
+    copyDir(getPath([PHRESTO_ROOT, 'vendor', $module, 'modules']), getPath(PHRESTO_ROOT, 'modules'));
+
+    echo "Module {$module} has been installed.\n";
 }
 
-function update($key) {
-	$pos = array_search($key, $argv) + 1;
-	if (empty($argv[$pos]) || mb_strpos('/', $argv[$pos]) === false) {
-		echo "Wrong module name.\n";
-		return;
-	}
-	$module = $argv[$pos];
-	if (!is_dir(getPath([PHRESTO_ROOT, 'vendor', $module]))) {
-		echo "Module is not installed. Please use option -i instead.\n";
-		return;
-	}
-	echo "Updating module {$module}...\n";
-	passthru("composer update {$module}");
-	if (!is_dir(getPath([PHRESTO_ROOT, 'vendor', $module]))) {
-		echo "Module was not installed correctly.\n";
-		return;
-	}
-	copyDir(
-		getPath([PHRESTO_ROOT, 'vendor', $module, 'modules']), 
-		getPath(PHRESTO_ROOT, 'modules'),
-		['.ini' . DIRECTORY_SEPARATOR]
-	);
-	
-	echo "Module {$module} has been updated.\n";
+function update($key)
+{
+    $pos = array_search($key, $argv) + 1;
+    if (empty($argv[$pos]) || mb_strpos('/', $argv[$pos]) === false) {
+        echo "Wrong module name.\n";
+        return;
+    }
+    $module = $argv[$pos];
+    if (!is_dir(getPath([PHRESTO_ROOT, 'vendor', $module]))) {
+        echo "Module is not installed. Please use option -i instead.\n";
+        return;
+    }
+    echo "Updating module {$module}...\n";
+    passthru("composer update {$module}");
+    if (!is_dir(getPath([PHRESTO_ROOT, 'vendor', $module]))) {
+        echo "Module was not installed correctly.\n";
+        return;
+    }
+    copyDir(
+        getPath([PHRESTO_ROOT, 'vendor', $module, 'modules']),
+        getPath(PHRESTO_ROOT, 'modules'),
+        ['.ini' . DIRECTORY_SEPARATOR]
+    );
+
+    echo "Module {$module} has been updated.\n";
 }
 
-function newone($key) {
+function newone($key)
+{
 
-	if (is_file(getPath([PHRESTO_ROOT , 'config', 'app.ini']))) {
-		echo "Sorry, current folder already contains Phresto project. Use -up instead.\n";
-		return;
-	}
+    if (is_file(getPath([PHRESTO_ROOT, 'config', 'app.ini']))) {
+        echo "Sorry, current folder already contains Phresto project. Use -up instead.\n";
+        return;
+    }
 
-	echo "Setting up new project...\n";
-	echo "Create project files...\n";
+    echo "Setting up new project...\n";
+    echo "Create project files...\n";
 
-	copyDir(getPath([__DIR__ , '..', 'template']), PHRESTO_ROOT );
-	echo "Project files created.\n";
+    copyDir(getPath([__DIR__, '..', 'template']), PHRESTO_ROOT);
+    echo "Project files created.\n";
 
-	$db = [];
-	do {
-		echo "\nTu add database config type db config name or leave empty to continue: ";
-		$answer = getLine();
-		if (!empty($answer)) {
-			$db = [$answer => []];
-			echo "db type [mysql]: ";
-			$db[$answer]['type'] = getLine();
-			if (empty($db[$answer]['type'])) $db[$answer]['type'] = 'mysql';
-			echo "host [localhost]: ";
-			$db[$answer]['host'] = getLine();
-			if (empty($db[$answer]['host'])) $db[$answer]['host'] = 'localhost';
-			echo "user [root]: ";
-			$db[$answer]['user'] = getLine();
-			if (empty($db[$answer]['user'])) $db[$answer]['user'] = 'root';
-			echo "password []: ";
-			$db[$answer]['passwd'] = getLine();
-			if (empty($db[$answer]['passwd'])) $db[$answer]['passwd'] = '';
-			echo "db name [phresto]: ";
-			$db[$answer]['dbname'] = getLine();
-			if (empty($db[$answer]['dbname'])) $db[$answer]['dbname'] = 'phresto';
-		}
+    $db = [];
+    do {
+        echo "\nTu add database config type db config name or leave empty to continue: ";
+        $answer = getLine();
+        if (!empty($answer)) {
+            $db = [$answer => []];
+            echo "db type [mysql]: ";
+            $db[$answer]['type'] = getLine();
+            if (empty($db[$answer]['type']))
+                $db[$answer]['type'] = 'mysql';
+            echo "host [localhost]: ";
+            $db[$answer]['host'] = getLine();
+            if (empty($db[$answer]['host']))
+                $db[$answer]['host'] = 'localhost';
+            echo "user [root]: ";
+            $db[$answer]['user'] = getLine();
+            if (empty($db[$answer]['user']))
+                $db[$answer]['user'] = 'root';
+            echo "password []: ";
+            $db[$answer]['passwd'] = getLine();
+            if (empty($db[$answer]['passwd']))
+                $db[$answer]['passwd'] = '';
+            echo "db name [phresto]: ";
+            $db[$answer]['dbname'] = getLine();
+            if (empty($db[$answer]['dbname']))
+                $db[$answer]['dbname'] = 'phresto';
+        }
 
-	} while(!empty($answer));
+    } while (!empty($answer));
 
-	if (!empty($db)) {
-		Phresto\Config::saveConfig('db', $db);
-	}
+    if (!empty($db)) {
+        Phresto\Config::saveConfig('db', $db);
+    }
 
-	echo "Install bower dependencies...\n";
-	passthru('bower install');
+    echo "Install bower dependencies...\n";
+    passthru('bower install');
 
-	echo "Done\n";
+    echo "Done\n";
 }
 
-function upgrade($key) {
+function upgrade($key)
+{
 
-	if (!is_file(getPath([PHRESTO_ROOT , 'config', 'app.ini']))) {
-		echo "Sorry, there is no Phresto project in this folder. Use -n instead.\n";
-		return;
-	}
+    if (!is_file(getPath([PHRESTO_ROOT, 'config', 'app.ini']))) {
+        echo "Sorry, there is no Phresto project in this folder. Use -n instead.\n";
+        return;
+    }
 
-	echo "Updating Phresto lib...\n";
-	passthru("composer update phresto/phresto");
-	echo "Update project files...\n";
+    echo "Updating Phresto lib...\n";
+    passthru("composer update phresto/phresto");
+    echo "Update project files...\n";
 
-	copyDir(getPath([__DIR__ , '..', 'template']), PHRESTO_ROOT, [
-			'.ini',
-			DIRECTORY_SEPARATOR . 'lang' . DIRECTORY_SEPARATOR,
-			DIRECTORY_SEPARATOR . 'temp' . DIRECTORY_SEPARATOR,
-			'.htaccess'
-		] );
-	echo "Project files updated.\n";
+    copyDir(getPath([__DIR__, '..', 'template']), PHRESTO_ROOT, [
+        '.ini',
+        DIRECTORY_SEPARATOR . 'lang' . DIRECTORY_SEPARATOR,
+        DIRECTORY_SEPARATOR . 'temp' . DIRECTORY_SEPARATOR,
+        '.htaccess'
+    ]);
+    echo "Project files updated.\n";
 
-	echo "Install bower dependencies...\n";
-	passthru('bower install');
+    echo "Install bower dependencies...\n";
+    passthru('bower install');
 
-	echo "Done\n";
+    echo "Done\n";
 }
 
-function updatemodulesini() {
-	echo "Updating modules.ini...\n";
+function updatemodulesini()
+{
+    echo "Updating modules.ini...\n";
 
-	Phresto\Utils::registerAutoload();
-	Phresto\Utils::updateModules();
+    Phresto\Utils::registerAutoload();
+    Phresto\Utils::updateModules();
 
-	echo "Done\n";
+    echo "Done\n";
 }
 
-function help($key) {
-	global $functions;
+function help($key)
+{
+    global $functions;
 
-	$usage = getPath(['vendor', 'bin', 'phresto']);
+    $usage = getPath(['vendor', 'bin', 'phresto']);
 
-	echo <<<END
+    echo <<<END
    _o   ___  ___       ___  ___  __  ____  ____
  _//___/ o/ /__/ /__/ /__/ /__  /_    /   /   /
 /_____/__/ /    /  / / \  /__  __/   /   /___/
 _O_____O____________________________________
                                  Phresto CLI
 
-Usage: 
+Usage:
 # {$usage} [options]
 
 Available options:
 
 END;
 
-	foreach ($functions as $key => $value) {
-		echo "  {$key}" . str_repeat(' ', 25 - mb_strlen($key)) . " - {$value['desc']}\n";
-	}
+    foreach ($functions as $key => $value) {
+        echo "  {$key}" . str_repeat(' ', 25 - mb_strlen($key)) . " - {$value['desc']}\n";
+    }
 
-	echo "\n";
+    echo "\n";
 }
 
-function copyDir($source, $dest, $skip = []) {
-	foreach (
-		$iterator = new \RecursiveIteratorIterator(
-		  new \RecursiveDirectoryIterator($source, \RecursiveDirectoryIterator::SKIP_DOTS),
-		  \RecursiveIteratorIterator::SELF_FIRST) as $item
-	) {
+function copyDir($source, $dest, $skip = [])
+{
+    foreach ($iterator = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($source, \RecursiveDirectoryIterator::SKIP_DOTS), \RecursiveIteratorIterator::SELF_FIRST) as $item) {
 
-		$destItem = getPath([$dest, $iterator->getSubPathName()]);
-		foreach ($skip as $value) {
-			if (mb_strpos($destItem, $value) !== false && 
-				file_exists($destItem)) continue 2;
-		}
+        $destItem = getPath([$dest, $iterator->getSubPathName()]);
+        foreach ($skip as $value) {
+            if (
+                mb_strpos($destItem, $value) !== false &&
+                file_exists($destItem)
+            )
+                continue 2;
+        }
 
-		if ( $item->isDir() ) {
-			@mkdir($destItem);
-		} else {
-			@copy($item, $destItem);
-		}
-	}
+        if ($item->isDir()) {
+            @mkdir($destItem);
+        } else {
+            @copy($item, $destItem);
+        }
+    }
 }
 
-function getLine() {
-	if (PHP_OS == 'WINNT') {
-	  $line = stream_get_line(STDIN, 1024, PHP_EOL);
-	} else {
-	  $line = readline();
-	}
+function getLine()
+{
+    if (PHP_OS == 'WINNT') {
+        $line = stream_get_line(STDIN, 1024, PHP_EOL);
+    } else {
+        $line = readline();
+    }
 
-	return $line;
+    return $line;
 }
 
-function getPath(array $folders) {
-	return implode(DIRECTORY_SEPARATOR, $folders);
+function getPath(array $folders)
+{
+    return implode(DIRECTORY_SEPARATOR, $folders);
 }

@@ -13,6 +13,7 @@ class Model implements ModelInterface, \JsonSerializable {
     const COLLECTION = 'model';
 
     protected $_properties = [];
+    protected $_calculated_properties = [];
     protected $_initial = [];
     protected $_debug = '';
     protected $_new = true;
@@ -26,6 +27,13 @@ class Model implements ModelInterface, \JsonSerializable {
     * ]
     */
     protected static $_fields = [];
+    /**
+     * array of the model field names and types that are not in database
+     * [
+     *   'fullName' => 'string'
+     * ]
+     */
+    protected static $_calculated_fields = [];
 
     /**
     * array of calculated default field values (['field_name' => 'default value'])
@@ -50,6 +58,15 @@ class Model implements ModelInterface, \JsonSerializable {
     *    ]
     */
     protected static $_relations = [];
+
+    /**
+    * array describing database indexes
+    * 'index_name' => [  // key is the name of the index in the database
+    *   'fields' => ['field1', 'field2'], // field names
+    *   'unique' => true|false // (false by default)
+    * ]
+    */
+	protected static $_indexes = []; // TODO
 
     public function __construct( $option = null, $checkIfNew = true ) {
         $this->_new = true;
@@ -146,6 +163,11 @@ class Model implements ModelInterface, \JsonSerializable {
                 $this->$field = $modelArray[$field];
             }
         }
+        foreach (static::$_calculated_fields as $field => $type) {
+            if (isset($modelArray[$field])) {
+                $this->$field = $modelArray[$field];
+            }
+        }
     }
 
     protected function set( $modelArray, $checkIfNew = true ) {
@@ -171,7 +193,13 @@ class Model implements ModelInterface, \JsonSerializable {
 
     protected function setObject( $model, $checkIfNew = true ) {
         $this->_properties = [];
+        $this->_calculated_properties = [];
         foreach( static::$_fields as $field => $type ) {
+            if ( isset( $model->$field ) ) {
+                $this->$field = $model->$field;
+            }
+        }
+        foreach( static::$_calculated_fields as $field => $type ) {
             if ( isset( $model->$field ) ) {
                 $this->$field = $model->$field;
             }
@@ -183,6 +211,12 @@ class Model implements ModelInterface, \JsonSerializable {
     public static function find( $query ) {
         $class = static::CLASSNAME;
         return [ new $class() ];
+    }
+
+    public static function findOne($query)
+    {
+        $class = static::CLASSNAME;
+        return new $class();
     }
 
     public static function count() {
@@ -269,6 +303,10 @@ class Model implements ModelInterface, \JsonSerializable {
     	if ( array_key_exists( $name, static::$_fields ) ) {
     		$this->_properties[$name] = $this->getTyped( $name, $value );
     	}
+
+        if (array_key_exists($name, static::$_calculated_fields)) {
+            $this->_calculated_properties[$name] = $this->getTyped($name, $value);
+        }
     }
 
     public function __get( $name ) {
@@ -280,6 +318,10 @@ class Model implements ModelInterface, \JsonSerializable {
     	   return $this->getTyped( $name );
         }
 
+        if (array_key_exists($name, static::$_calculated_fields)) {
+            return $this->getTyped($name);
+        }
+
         if ( method_exists( $this, "{$name}_value" ) ) {
             $method = "{$name}_value";
             return $this->$method();
@@ -288,7 +330,10 @@ class Model implements ModelInterface, \JsonSerializable {
 
     public function __isset( $name ) {
         $debug = ( $name == '_debug_' && !empty( $this->_debug ) );
-    	return ( $debug || ( array_key_exists( $name, static::$_fields ) && isset( $this->_properties[$name] ) ) );
+    	return ( $debug ||
+            ( array_key_exists( $name, static::$_fields ) && isset( $this->_properties[$name] ) ) ||
+            ( array_key_exists( $name, static::$_calculated_fields ) && isset( $this->_calculated_properties[$name] ) )
+        );
 
     }
 
@@ -311,12 +356,19 @@ class Model implements ModelInterface, \JsonSerializable {
     }
 
     protected function getTyped( $name, $value = null ) {
-        if ( array_key_exists( $name, static::$_fields ) ) {
-            if ( $value === null && isset( $this->_properties[$name] ) ) {
-                $value = $this->_properties[$name];
+        $field = array_key_exists( $name, static::$_fields ) ? static::$_fields[$name] : false;
+        $properties = &$this->_properties;
+        if ( !$field ) {
+            $field = array_key_exists( $name, static::$_calculated_fields ) ? static::$_calculated_fields[$name] : false;
+            $properties = &$this->_calculated_properties;
+        }
+
+        if ( $field ) {
+            if ( $value === null && isset( $properties[$name] ) ) {
+                $value = $properties[$name];
             }
 
-            $type = $this->getUniType( static::$_fields[$name] );
+            $type = $this->getUniType( $field );
 
             if ( class_exists( $type ) ) {
                 if ( !is_a( $value, $type ) ) $value = new $type( $value );
@@ -336,7 +388,7 @@ class Model implements ModelInterface, \JsonSerializable {
     }
 
     public function jsonSerialize() {
-        $fields = $this->filterJson( $this->_properties );
+        $fields = $this->filterJson( array_merge($this->_properties, $this->_calculated_properties) );
         foreach ( $fields as $key => $value ) {
             if ( $value instanceof \DateTime ) {
                 $fields[$key] = $value->format( \DateTime::ISO8601 );

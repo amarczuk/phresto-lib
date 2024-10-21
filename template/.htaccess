@@ -1,8 +1,12 @@
+php_value upload_max_filesize 40M
+php_value post_max_size 42M
+
 RewriteEngine On
 RewriteBase /
 
 RewriteRule ^favicon(.*)$ static/favicon$1 [L]
 RewriteRule ^static/(.*)$ static/$1 [QSA,L]
+RewriteRule ^mysql/(.*)$ mysql/$1 [QSA,L]
 RewriteRule ^(.*)/static/(.*)$ $1/static/$2 [QSA,L]
 
 RewriteCond %{REQUEST_URI} ^(.*)$ [NC]
