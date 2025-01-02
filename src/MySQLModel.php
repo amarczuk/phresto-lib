@@ -415,7 +415,7 @@ class MySQLModel extends Model {
 
             $fk = [static::NAME . '__' . $relation['index'], $relation['model'] . '__' . $relation['field']];
             if ($relation['type'] != 'n:n') sort($fk);
-            $fkName = join($fk, '__');
+            $fkName = implode('__', $fk);
             $relatedTable = $relation['type'] != 'n:n'
                 ? constant("Phresto\\Modules\\Model\\{$relation['model']}::COLLECTION")
                 : static::COLLECTION;
@@ -430,7 +430,7 @@ class MySQLModel extends Model {
             }
 
             $sqls[] = $sql;
-            $fkNames[] = "ALTER TABLE `" . static::COLLECTION . "` DROP FOREIGN KEY IF EXISTS {$fkName};";
+            $fkNames[] = "CALL PROC_DROP_FOREIGN_KEY('" . static::COLLECTION . "', '{$fkName}');";
         }
         if (empty($sqls)) return '';
 
