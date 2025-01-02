@@ -267,8 +267,8 @@ class MySQLModel extends Model {
             $sql = "UPDATE " . static::COLLECTION . " SET " . implode( ', ', $fields );
             $sql .= " WHERE " . static::INDEX . " = :" . static::INDEX . " LIMIT 1";
         } else {
-            $sql = "INSERT INTO " . static::COLLECTION . " ( `" . implode( '`, `', static::getFields() ) . "` ) ";
-            $sql .= "VALUES ( :" . implode( ', :', static::getFields() ) . " )";
+            $sql = "INSERT INTO " . static::COLLECTION . " ( `" . implode( '`, `', $this->filteredFields() ) . "` ) ";
+            $sql .= "VALUES ( :" . implode( ', :', $this->filteredFields() ) . " )";
         }
         $db->query( $sql, $this->_properties );
 
@@ -278,6 +278,18 @@ class MySQLModel extends Model {
         }
 
         return true;
+    }
+
+    protected function filteredFields() {
+        $fields = static::getFields();
+        $filtered = [];
+        foreach ( $fields as $field ) {
+            if ( array_key_exists( $field, $this->_properties ) ) {
+                array_push($filtered, $field);
+            }
+        }
+
+        return $filtered;
     }
 
     protected function deleteRecord() {
@@ -290,11 +302,16 @@ class MySQLModel extends Model {
         return true;
     }
 
-    public static function count() {
-        $db = MySQLConnector::getInstance( static::DB );
+    public static function count($query = null) {
+        $db = MySQLConnector::getInstance(static::DB);
+        list($conds, $binds) = static::getConds($query);
 
-        $sql = "SELECT COUNT(" . static::INDEX . ") as cnt FROM " . static::COLLECTION . " WHERE 1;";
-        $result = $db->query( $sql );
+        $fields = static::getQueryFields($query);
+
+        $sql = "SELECT COUNT(" . static::INDEX . ") as cnt FROM " . static::COLLECTION . " WHERE " . implode(' AND ', $conds);
+        $sql .= static::extendQuery($query);
+
+        $result = $db->query($sql, $binds);
 
         $record = $db->getNext( $result );
         return $record['cnt'];

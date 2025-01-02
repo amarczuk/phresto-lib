@@ -173,7 +173,7 @@ class ModelController extends Controller {
 		$modelInstance = Container::{$this->modelName}();
 
 		if ( empty( $id ) && empty( $this->contextModel ) ) {
-			header( 'X-Count: ' . $modelInstance::count() );
+			header( 'X-Count: ' . $modelInstance::count( $this->query ) );
 			return null;
 		}
 

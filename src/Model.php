@@ -219,7 +219,7 @@ class Model implements ModelInterface, \JsonSerializable {
         return new $class();
     }
 
-    public static function count() {
+    public static function count($query) {
         return 0;
     }
 
@@ -285,6 +285,16 @@ class Model implements ModelInterface, \JsonSerializable {
         $this->_initial = $this->_properties;
         $this->_new = true;
         $this->deleteAfter();
+    }
+
+    protected static function deleteRecords($query)
+    {
+        return 0;
+    }
+
+    public static function deleteAll($query)
+    {
+        return self::deleteRecords($query);
     }
 
     public function getIndex() {

@@ -26,6 +26,7 @@ class Router {
 		if (!empty($origin) && $reqType == 'options') {
 			header("Access-Control-Allow-Origin: {$origin}");
 			header("Access-Control-Allow-Credentials: true");
+			header("Access-Control-Expose-Headers: *");
 			header('Access-Control-Allow-Methods: GET, PUT, PATCH, DELETE, POST, OPTIONS');
 			header('Access-Control-Allow-Headers: Origin, Content-Type, Authorization, Referer, User-Agent');
 			header('Access-Control-Max-Age: 1728000');
@@ -38,7 +39,8 @@ class Router {
 			header("Access-Control-Allow-Origin: {$origin}");
 			header("Access-Control-Allow-Credentials: true");
 			header('Access-Control-Allow-Headers: *');
-		}
+			header("Access-Control-Expose-Headers: *");
+        }
 
 		if ( $reqType != 'get' && $reqType != 'delete' ) {
       $bodyRaw = @file_get_contents('php://input');

@@ -124,6 +124,14 @@ class Controller {
 	 * @return string|null
 	 */
 	protected static function getParamType( \ReflectionParameter $parameter ) {
+        if (method_exists($parameter, 'getType')) {
+            $type = $parameter->getType();
+            return !empty($type) ?
+                method_exists($type, 'getName') ? $type->getName() : $type->__toString() :
+                null;
+        }
+
+        // PHP < 7
 	    $export = \ReflectionParameter::export(
 	        [
 	            $parameter->getDeclaringClass()->name,
