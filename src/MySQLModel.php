@@ -405,17 +405,20 @@ class MySQLModel extends Model {
         $sql .= $new ? "\n) ENGINE=INNODB;\n" : ";\n";
 
         foreach (static::$_indexes as $index => $value) {
+            $idx_fields = implode(',', $value['fields']);
+            $is_unique = isset($value['unique']) ? $value['unique'] : false;
+            $idx_type = isset($value['type']) ? $value['type'] : '';
             if (array_key_exists($index, $modelIndexes) &&
-                implode(',', $modelIndexes[$index]['fields']) == implode(',', $value['fields']) &&
-                $modelIndexes[$index]['unique'] == $value['unique'] &&
-                $modelIndexes[$index]['type'] == $value['type']) {
+                implode(',', $modelIndexes[$index]['fields']) == $idx_fields &&
+                $modelIndexes[$index]['unique'] == $is_unique &&
+                $modelIndexes[$index]['type'] == $idx_type) {
                 continue;
             }
 
             if (array_key_exists($index, $modelIndexes)) {
                 $sql .= "DROP INDEX `{$index}` ON `" . static::COLLECTION . "`;\n";
             }
-            $sql .= "CREATE " . ($value['unique'] ? 'UNIQUE ' : '') . $value['type'] . " INDEX `{$index}` ON `" . static::COLLECTION . "` (`" . implode('`, `', $value['fields']) . "`);\n";
+            $sql .= "CREATE " . ($is_unique ? 'UNIQUE ' : '') . $idx_type . " INDEX `{$index}` ON `" . static::COLLECTION . "` (`" . implode('`, `', $value['fields']) . "`);\n";
         }
         return $sql;
     }
