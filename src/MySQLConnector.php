@@ -55,7 +55,7 @@ class MySQLConnector extends DBConnector
         }
 
         if ( is_object( $var ) && $var instanceof \DateTime ) {
-            return "'" . $var->format( \DateTime::ISO8601 ) . "'";
+            return "'" . $var->format( \DateTime::ATOM ) . "'";
         }
 
         if ( is_object( $var ) ) {
