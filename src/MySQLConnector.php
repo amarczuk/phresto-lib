@@ -123,6 +123,24 @@ class MySQLConnector extends DBConnector
         return $fields;
     }
 
+    public function getIndexes( $table ) {
+        $res = $this->query("SHOW INDEX FROM {$table}");
+        $fields = [];
+
+        while($row = $this->getNext($res)) {
+            if (!empty($fields[$row['Key_name']])) {
+                $fields[$row['Key_name']]['fields'][] = $row['Column_name'];
+                continue;
+            }
+            $fields[$row['Key_name']] = [
+                'fields' => [$row['Column_name']],
+                'unique' => $row['Non_unique'] == 0,
+                'type' => $row['Index_type'] !== 'BTREE' ? $row['Index_type'] : ''
+            ];
+        }
+        return $fields;
+    }
+
     public static function typeFromId( $type_id ) {
         if (empty(static::$_types)) {
             static::$_types = array();

@@ -64,9 +64,10 @@ class Model implements ModelInterface, \JsonSerializable {
     * 'index_name' => [  // key is the name of the index in the database
     *   'fields' => ['field1', 'field2'], // field names
     *   'unique' => true|false // (false by default)
+    *   'type' => '' // index type (optional) - FULLTEXT, SPATIAL
     * ]
     */
-	protected static $_indexes = []; // TODO
+	protected static $_indexes = [];
 
     public function __construct( $option = null, $checkIfNew = true ) {
         $this->_new = true;

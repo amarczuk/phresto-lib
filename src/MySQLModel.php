@@ -356,8 +356,10 @@ class MySQLModel extends Model {
         $newCols = [];
         $dropCols = [];
         $modelFields = static::getFields();
+        $modelIndexes = [];
         try {
             $fields = $db->getFields( static::COLLECTION );
+            $modelIndexes = $db->getIndexes( static::COLLECTION );
             $new = false;
             foreach($fields as $name => $type) {
                 if (!in_array($name, $modelFields)) {
@@ -401,12 +403,30 @@ class MySQLModel extends Model {
         }
         $sql = trim($sql, ",\n");
         $sql .= $new ? "\n) ENGINE=INNODB;\n" : ";\n";
+
+        foreach (static::$_indexes as $index => $value) {
+            if (array_key_exists($index, $modelIndexes) &&
+                implode(',', $modelIndexes[$index]['fields']) == implode(',', $value['fields']) &&
+                $modelIndexes[$index]['unique'] == $value['unique'] &&
+                $modelIndexes[$index]['type'] == $value['type']) {
+                continue;
+            }
+
+            if (array_key_exists($index, $modelIndexes)) {
+                $sql .= "DROP INDEX `{$index}` ON `" . static::COLLECTION . "`;\n";
+            }
+            $sql .= "CREATE " . ($value['unique'] ? 'UNIQUE ' : '') . $value['type'] . " INDEX `{$index}` ON `" . static::COLLECTION . "` (`" . implode('`, `', $value['fields']) . "`);\n";
+        }
         return $sql;
     }
 
     public static function getRelationCode() {
+        $db = MySQLConnector::getInstance( static::DB );
+
         $sqls = [];
         $fkNames = [];
+        $modelIndexes = $db->getIndexes( static::COLLECTION );
+
         foreach (static::$_relations as $model => $relation) {
             $sql = '';
 
@@ -416,6 +436,11 @@ class MySQLModel extends Model {
             $fk = [static::NAME . '__' . $relation['index'], $relation['model'] . '__' . $relation['field']];
             if ($relation['type'] != 'n:n') sort($fk);
             $fkName = implode('__', $fk);
+
+            if (array_key_exists($fkName, $modelIndexes)) {
+                continue;
+            }
+
             $relatedTable = $relation['type'] != 'n:n'
                 ? constant("Phresto\\Modules\\Model\\{$relation['model']}::COLLECTION")
                 : static::COLLECTION;
@@ -436,8 +461,19 @@ class MySQLModel extends Model {
 
         $sql = implode(",\n", $sqls) . ";\n";
 
-        $sql = implode("\n", $fkNames) . "\nALTER TABLE `" . static::COLLECTION . "` \n" . $sql;
-        return $sql;
+        if (!empty(trim($sql)) && count($fkNames) > 0) {
+            return implode("\n", $fkNames) . "\nALTER TABLE `" . static::COLLECTION . "` \n" . $sql;
+        }
+
+        if (!empty(trim($sql))) {
+            return "ALTER TABLE `" . static::COLLECTION . "` \n" . $sql;
+        }
+
+        if (count($fkNames) > 0) {
+            return implode("\n", $fkNames);
+        }
+
+        return '';
     }
 
     private static function getSqlType($type) {
