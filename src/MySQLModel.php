@@ -190,6 +190,19 @@ class MySQLModel extends Model {
 
     public static function find( $query = null ) {
         $db = MySQLConnector::getInstance( static::DB );
+        $result = static::findIter( $query );
+
+        $modelClass = static::CLASSNAME;
+        $res = [];
+        while ( $row = $db->getNext( $result ) ) {
+            $res[] = Container::$modelClass($row, false);
+        }
+
+        return $res;
+    }
+
+    public static function findIter( $query = null ) {
+        $db = MySQLConnector::getInstance( static::DB );
         list( $conds, $binds ) = static::getConds( $query );
 
         $fields = static::getQueryFields( $query );
@@ -199,13 +212,7 @@ class MySQLModel extends Model {
 
         $result = $db->query( $sql, $binds );
 
-        $modelClass = static::CLASSNAME;
-        $res = [];
-        while ( $row = $db->getNext( $result ) ) {
-            $res[] = Container::$modelClass($row, false);
-        }
-
-        return $res;
+        return $result;
     }
 
     public static function findOne($query = null) {
