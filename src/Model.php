@@ -139,7 +139,7 @@ class Model implements ModelInterface, \JsonSerializable {
     protected function getEmpty() {
     	$this->_properties = [];
     	foreach( static::$_fields as $field => $type ) {
-    		$this->_properties[$field] = '';
+    		$this->_properties[$field] = null;
     	}
     	$this->_new = true;
     }

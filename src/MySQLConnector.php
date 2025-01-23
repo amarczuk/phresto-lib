@@ -35,7 +35,11 @@ class MySQLConnector extends DBConnector
             return ( $var ) ? 'TRUE' : 'FALSE';
         }
 
-        if ( empty( $var ) && $var !== 0 ) {
+        if ( empty( $var ) && $var !== 0 && $var !== '' ) {
+            return "NULL";
+        }
+
+        if ( empty( $var ) && $var == '') {
             return "''";
         }
 
