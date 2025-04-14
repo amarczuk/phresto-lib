@@ -73,9 +73,13 @@ class MySQLConnector extends DBConnector
     public function bind( $query, $variables ) {
         foreach ( $variables as $key => $val ) {
             $val = $this->escape( $val );
+            if (is_string($val)) {
+                $val = str_replace('$', '&us-dollar;', $val);
+            }
             $query = preg_replace( "/\\:{$key}([\\s,\\)\\%\\.\\?]+|$)/isU", "{$val}\$1", $query );
         }
 
+        $query = str_replace( '&us-dollar;', '$', $query );
         return $query;
     }
 
