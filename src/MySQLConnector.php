@@ -99,7 +99,7 @@ class MySQLConnector extends DBConnector
         }
 
         if ( !$result = $this->connection->query( $query ) ) {
-            throw new DBException( "Query failed: " . $this->getLastError() );
+            throw new DBException( "Query failed: " . $this->getLastError() . " - Query: {$query}" );
 
         }
         return $result;
@@ -132,7 +132,7 @@ class MySQLConnector extends DBConnector
     }
 
     public function getIndexes( $table ) {
-        $res = $this->query("SHOW INDEX FROM {$table}");
+        $res = $this->query("SHOW INDEX FROM `{$table}`");
         $fields = [];
 
         while($row = $this->getNext($res)) {
