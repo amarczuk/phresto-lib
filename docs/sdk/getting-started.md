@@ -1,13 +1,14 @@
 # Getting Started
 
+> **v2 baseline** — Phresto is now a JSON-only REST API framework. The bundled Explorer/Admin UIs, HTML templates, Bower setup, and language files are gone. Discovery is served as an OpenAPI 3.0 spec at `/openapi`.
+
 Phresto is a PHP REST framework that turns models and controllers into HTTP endpoints by convention. This guide shows how to create a new project and make your first API call.
 
 ## Requirements
 
-- PHP 7.0 or newer
+- PHP 7.4 or newer
 - MySQL (for the default model backend)
 - Composer
-- Bower (used by the bundled admin/explorer UIs)
 
 ## Create a project
 
@@ -25,15 +26,16 @@ The `-n` option copies the `template/` files into the current directory and prom
 ```
 config/
   app.ini
-  view.ini
-modules/           # bundled modules: user, explorer, admin
-static/
-view/
+  db.ini
+modules/           # built-in module: user
+static/            # static assets only
 migration/
 scripts/
 bootstrap.php
 .htaccess
 ```
+
+There is no `view/`, `lang/`, or `config/view.ini` anymore.
 
 ## Configure the database
 
@@ -80,18 +82,26 @@ Make sure `mod_rewrite` is enabled on Apache, or configure your server to rewrit
 
 ## First request
 
-The default root path shows `static/index.html`. The Explorer tool is available at:
+The framework only returns JSON. Test the built-in user model:
 
-```
-GET http://localhost:8000/explorer
+```bash
+curl -X POST \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"test@example.com","password":"secret"}' \
+  http://localhost:8000/user/register
 ```
 
-Explorer lists all discovered endpoints and lets you test them from the browser.
+Or inspect the OpenAPI spec:
+
+```bash
+curl http://localhost:8000/openapi
+curl "http://localhost:8000/openapi?format=yaml"
+```
 
 ## Typical workflow
 
 1. Create a model class in `modules/<module>/model/<name>.php`.
 2. Optionally create a controller class for custom endpoints.
-3. Run `vendor/bin/phresto -m` to refresh `config/modules.ini`.
+3. Run `vendor/bin/phresto -m` to refresh `config/modules.ini` and `config/openapi.json`.
 4. Run `php scripts/create_models.php` to update the database schema.
 5. Call the endpoints from your frontend using `phresto.js` or any HTTP client.

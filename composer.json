@@ -9,7 +9,6 @@
   },
   "bin": ["bin/phresto"],
   "require" : {
-  	"php": ">=7.0.0",
-    "lusitanian/oauth": "*"
+  	"php": ">=7.4.0"
   }
 }

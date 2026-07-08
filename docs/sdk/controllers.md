@@ -1,5 +1,7 @@
 # Creating Controllers
 
+> **v2 baseline** — Controllers return JSON through `Response::json()`. HTML views and `$this->jsonResponse()` are gone.
+
 When a model's generic CRUD endpoints are not enough, create a controller class to add custom endpoints and logic.
 
 ## Basic controller
@@ -10,6 +12,7 @@ Create `modules/example/controller/report.php`:
 <?php
 namespace Phresto\Modules\Controller;
 use Phresto\Controller;
+use Phresto\Response;
 
 class report extends Controller {
     const CLASSNAME = __CLASS__;
@@ -18,7 +21,7 @@ class report extends Controller {
      * GET /report/sales
      */
     public function sales_get() {
-        return $this->jsonResponse([
+        return Response::json([
             'total' => 12345,
         ]);
     }
@@ -31,7 +34,7 @@ The method name format is `<segment>_<verb>`. The first remaining URL segment mu
 
 ```php
 public function get() {
-    return $this->jsonResponse(['hello' => 'world']);
+    return Response::json(['hello' => 'world']);
 }
 ```
 
@@ -61,9 +64,15 @@ public function search_get( string $q, int $limit ) {
 
 ## Returning responses
 
-- Return `$this->jsonResponse($data)` for JSON.
-- Return a `View` instance's `get()` result for HTML.
-- Return plain strings for raw output.
+Always return `Response::json($data)`:
+
+```php
+return Response::json( $data );
+return Response::json( $data, 201 );
+return Response::json( ['error' => 'Bad request'], 400 );
+```
+
+There is no HTML view path anymore.
 
 ## Custom model controller
 
@@ -73,10 +82,15 @@ To add endpoints around a specific model while keeping the generic REST methods,
 <?php
 namespace Phresto\Modules\Controller;
 use Phresto\CustomModelController;
+use Phresto\Response;
 
 class product extends CustomModelController {
     const CLASSNAME = __CLASS__;
     const MODELCLASS = 'Phresto\\Modules\\Model\\product';
+
+    public function stats_get() {
+        return Response::json( ['count' => 42] );
+    }
 }
 ```
 
@@ -105,4 +119,4 @@ protected function auth( $methodName, $args = null ) {
 
 ## Discovery
 
-Every controller automatically answers `GET /<name>/discover` with a JSON description of its endpoints, parameters, and docblocks. The Explorer UI uses this to build interactive forms.
+Every controller still answers `GET /<name>/discover`, but the response is now an OpenAPI path-item fragment. The full spec is at `GET /openapi`.

@@ -2,7 +2,7 @@
 
 namespace Phresto;
 
-use Phresto\View;
+use Phresto\Response;
 use Phresto\Modules\Model\user;
 
 class Controller {
@@ -61,7 +61,7 @@ class Controller {
 		} else if ( $reflection->hasMethod( $this->reqType ) ) {
 			$method = $reflection->getMethod( $this->reqType );
 		} else {
-			throw new Exception\RequestException( LAN_HTTP_NOT_FOUND, 404 );
+			throw new Exception\RequestException( 'Not found', 404 );
 		}
 
 		$params = $method->getParameters();
@@ -88,7 +88,7 @@ class Controller {
 		list( $method, $args ) = $this->getMethod();
 
 		if ( !$this->auth( $method->name, $args ) ) {
-			throw new Exception\RequestException( LAN_HTTP_UNAUTHORIZED, 401 );
+			throw new Exception\RequestException( 'Unauthorized', 401 );
 		}
 
 		$method->setAccessible( true );
@@ -96,7 +96,7 @@ class Controller {
 			return $method->invokeArgs( $this, $args );
 		} catch ( \TypeError $error ) {
             error_log( $error->getMessage() );
-			throw new Exception\RequestException( LAN_HTTP_BAD_REQUEST, 400 );
+			throw new Exception\RequestException( 'Bad request', 400 );
 		}
 	}
 
@@ -141,23 +141,19 @@ class Controller {
 	        true
 	    );
 
-	    return preg_match('/[>] ([\\\\A-z]+) /', $export, $matches) ? $matches[1] : null;
+	    return preg_match('/[\>] ([\\A-z]+) /', $export, $matches) ? $matches[1] : null;
 	}
 
 	protected function auth( $methodName, $args = null ) {
 		return $this->currentUser->hasAccess( static::CLASSNAME, $methodName );
 	}
 
-	protected function jsonResponse( $var ) {
-		return View::jsonResponse( $var );
-	}
-
 	/**
-	* prints controller description
+	* return OpenAPI fragment for this controller
 	* @return object
 	*/
 	protected function discover_get() {
-		return $this->jsonResponse( static::discover() );
+		return Response::json( OpenApi::discoverClass( static::CLASSNAME ) );
 	}
 
 	protected static function getParameters( $method, $className ) {
@@ -168,6 +164,10 @@ class Controller {
 		return [];
 	}
 
+	/**
+	 * Discover HTTP endpoints exposed by this class.
+	 * Returns an OpenAPI-style paths fragment.
+	 */
 	public static function discover( $all = false, $className = null, $getRelated = true ) {
 
 		$hasParam = function( $params, $field ) {
@@ -199,8 +199,8 @@ class Controller {
 		foreach ( $classMethods as $method ) {
 			if ( !in_array( $method->name, $requestTypes ) &&
 				 !( strpos( $method->name, '_' ) !== false &&
-				 	in_array( substr( $method->name, strpos( $method->name, '_' ) + 1 ), $requestTypes )
-				  )
+			 	in_array( substr( $method->name, strpos( $method->name, '_' ) + 1 ), $requestTypes )
+			 	)
 				) continue;
 
 			$describe = [ 'name' => $method->name, 'urlparams' => [], 'params' => [] ];

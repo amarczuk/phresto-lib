@@ -1,39 +1,72 @@
 # Controllers
 
-Phresto has three controller classes in the core framework: `Controller`, `ModelController`, and `CustomModelController`. They form a small hierarchy for handling HTTP endpoints.
+> **v2 baseline** — Controllers return JSON through `Response::json()`. The old `View` HTML layer and `LAN_HTTP_*` language constants are gone. `discover_get()` now returns an OpenAPI fragment.
 
-## `Controller` (`src/Controller.php`)
+## Base `Controller`
 
-The base class for all HTTP endpoint classes. A concrete controller lives in namespace `Phresto\Modules\Controller` and declares one or more public/protected verb methods (`get`, `post`, `patch`, `put`, `delete`, `head`, or `<name>_<verb>`).
-
-### Constructor
+All custom controllers extend `Phresto\Controller`.
 
 ```php
-public function __construct( $reqType, $route, $body, $bodyRaw, $query, $headers )
+<?php
+namespace Phresto\Modules\Controller;
+use Phresto\Controller;
+use Phresto\Response;
+
+class report extends Controller {
+    const CLASSNAME = __CLASS__;
+
+    public function sales_get() {
+        return Response::json( [ 'total' => 12345 ] );
+    }
+}
 ```
 
-The router creates controllers via the `Container` static factory, passing parsed request data. The constructor also resolves the current user:
+## Returning data
+
+The canonical return is a response array from `Response`:
 
 ```php
-$this->currentUser = user::getCurrent( $this->headers );
+return Response::json( $data, 200 );
+return Response::json( [ 'error' => 'Bad input' ], 400 );
 ```
 
-### Method discovery and execution
+`Response::json()` produces:
 
-`Controller::getMethod()`:
+```php
+[
+    'body'         => json_encode( $data, JSON_PRETTY_PRINT ),
+    'content-type' => 'application/json',
+    'code'         => 200,
+]
+```
 
-1. Looks for `<segment>_<verb>` when a route segment is present.
-2. Falls back to a method named exactly like the verb.
-3. Binds route, body, and query params using `$routeMapping`.
+Plain strings, arrays, and objects are still accepted by `bootstrap.php`, but `Response::json()` is the intended path.
 
-`Controller::exec()`:
+## Parameter binding
 
-1. Calls `getMethod()`.
-2. Calls `auth($methodName, $args)`; on failure throws 401.
-3. Invokes the method with bound arguments.
-4. Catches `TypeError` and converts it to a 400 response.
+Same as before:
 
-### Auth hook
+```php
+public function search_get( string $q, int $limit = 10 ) {
+    // GET /report/search?q=foo&limit=5
+}
+```
+
+URL mapping:
+
+```php
+protected $routeMapping = [
+    'search_get' => [ 'q' => 0, 'limit' => 1 ],
+];
+
+public function search_get( string $q, int $limit ) {
+    // GET /report/search/foo/5
+}
+```
+
+## Auth
+
+Controllers inherit:
 
 ```php
 protected function auth( $methodName, $args = null ) {
@@ -41,72 +74,46 @@ protected function auth( $methodName, $args = null ) {
 }
 ```
 
-Controllers can override this to implement custom authorisation logic. The bundled `user` controller restricts users to their own record unless they are a superuser.
-
-### Discovery / introspection
-
-`Controller::discover()` uses reflection to enumerate endpoints, their HTTP verbs, URL parameters, body/query parameters, and docblock descriptions. This powers the Explorer UI and the admin permissions editor.
-
-## `ModelController` (`src/ModelController.php`)
-
-`ModelController` provides a generic REST API for any `Model` subclass. It is instantiated by the router when the first URL segment matches a model class name but no controller class exists.
-
-### Constructor
+Override for public endpoints:
 
 ```php
-public function __construct( $modelName, $reqType, $route, $body, $bodyRaw, $query, $headers, Model $contextModel = null )
+protected function auth( $methodName, $args = null ) {
+    if ( $methodName === 'public_get' ) return true;
+    return parent::auth( $methodName, $args );
+}
 ```
 
-`$modelName` is the fully-qualified model class. `$contextModel` is set when handling a nested relation URL such as `/user/5/token`.
+## `ModelController`
 
-### Auth
-
-Authorisation is checked against the model class and method name:
+Framework-owned. Maps HTTP verbs to CRUD. It now uses `Response::json()` and plain text error messages (no language constants). The constructor signature was fixed to be explicitly nullable:
 
 ```php
-return $this->currentUser->hasAccess( $this->modelName, $methodName );
+public function __construct(
+    $modelName, $reqType, $route, $body, $bodyRaw, $query, $headers,
+    ?Model $contextModel = null
+)
 ```
 
-### REST methods
+## `CustomModelController`
 
-| Method | Behaviour |
-|--------|-----------|
-| `head($id = null)` | Return count or existence via `X-Count`. |
-| `get($id = null)` | Read one by id, list all, or list related records. |
-| `post()` | Create a new record. |
-| `patch($id = null)` | Partial update (requires id). |
-| `put($id = null)` | Upsert. |
-| `delete($id = null)` | Delete by id. |
-
-### Nested routes
-
-`hasNextRoute()` checks whether path segments remain after consuming `routeMapping`. If so, `escalate()`:
-
-1. Loads the parent model by id.
-2. Verifies the next segment is a related model.
-3. Creates a new `ModelController` for the related model with the parent as context.
-
-## `CustomModelController` (`src/CustomModelController.php`)
-
-A thin subclass that lets a controller class be tied to exactly one model. The subclass declares:
+User extension point for model REST endpoints:
 
 ```php
-const MODELCLASS = 'Phresto\\Modules\\Model\\user';
+<?php
+namespace Phresto\Modules\Controller;
+use Phresto\CustomModelController;
+use Phresto\Response;
+
+class product extends CustomModelController {
+    const CLASSNAME = __CLASS__;
+    const MODELCLASS = 'Phresto\\Modules\\Model\\product';
+
+    public function stats_get() {
+        return Response::json( [ 'count' => 42 ] );
+    }
+}
 ```
 
-It overrides the constructor so the router can instantiate it the same way as a regular controller, while still acting as a `ModelController` for the declared model. This is used by the bundled `user` controller to add custom endpoints (`authenticate_post`, `register_post`, `auth_get`, etc.) on top of the standard model REST API.
+## Discovery
 
-## Endpoint naming conventions
-
-A controller or model named `product` yields URLs such as:
-
-| URL | Handler |
-|-----|---------|
-| `/product` GET | `ModelController::get()` → list |
-| `/product/42` GET | `ModelController::get(42)` → one record |
-| `/product` POST | `ModelController::post()` → create |
-| `/product/42` PATCH | `ModelController::patch(42)` → update |
-| `/product/42` DELETE | `ModelController::delete(42)` → delete |
-| `/product/discover` GET | `ModelController::discover_get()` → endpoint metadata |
-
-If a custom controller `product` exists in `Phresto\Modules\Controller`, it takes precedence and can define arbitrary verb methods.
+`Controller::discover_get()` now returns an OpenAPI path-item fragment via `OpenApi::discoverClass(static::CLASSNAME)`. The full spec is available at `GET /openapi`.

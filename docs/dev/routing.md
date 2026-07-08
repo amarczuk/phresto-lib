@@ -1,117 +1,90 @@
-# Routing and Request Lifecycle
+# Routing
 
-Phresto maps HTTP requests to PHP classes and methods by convention. This document describes how the `Router` class resolves a URL and how `Controller` executes the chosen handler.
+> **v2 baseline** — Routing is unchanged, but every successful response is now JSON and discovery is served as a cached OpenAPI 3.0 spec at `/openapi`.
 
-## Entry point and rewrite rules
+## URL-to-class mapping
 
-The `template/.htaccess` file routes all non-static traffic to `bootstrap.php` with the original path in `$_GET['PHRESTOREQUESTPATH']`:
+Given a request:
 
-```apache
-RewriteRule ^ bootstrap.php?PHRESTOREQUESTPATH=%1 [QSA,L]
+```
+GET /product/5/reviews
 ```
 
-`bootstrap.php` then calls `Phresto\Router::route()` and emits the response.
+`Router` decides the first segment is a model because `modules/product/model/product.php` exists. It instantiates `Phresto\ModelController` with `$modelName = 'Phresto\\Modules\\Model\\product'`.
 
-## Router internals (`src/Router.php`)
+If the first segment matched a custom controller file (`modules/<x>/controller/<x>.php`), it would instantiate `Phresto\Modules\Controller\x`.
 
-`Router::route()` performs the following steps:
+## Method resolution
 
-1. **Read HTTP metadata**
-   - `$_SERVER['REQUEST_METHOD']` → lower-cased verb (`get`, `post`, etc.)
-   - `$_GET['PHRESTOREQUESTPATH']` → split into path segments
-   - Query string minus `PHRESTOREQUESTPATH`
-   - Request body parsed from JSON, form data, or `$_POST`
-   - Request headers via `getRequestHeaders()`
+Inside a controller, `getMethod()` looks for a method named after the next route segment plus the request verb:
 
-2. **CORS handling**
-   - If `config/app.ini` contains `cors`, preflight `OPTIONS` requests return the configured headers.
-   - Otherwise the configured origin headers are added to all responses.
+```
+GET /report/sales
+```
 
-3. **Resolve the first segment**
-   - Empty path:
-     - Try `app.mainmodule` controller (`Phresto\Modules\Controller\<mainmodule>`).
-     - Fall back to `static/index.html`.
-     - Otherwise 404.
-   - Non-empty path:
-     - Controller exists? `Phresto\Modules\Controller\<class>`.
-     - Otherwise model exists? `Phresto\Modules\Model\<class>` → wrap with `ModelController`.
-     - Otherwise 404.
+```php
+class report extends Controller {
+    public function sales_get() { ... }
+}
+```
 
-4. **Execute and render**
-   - Calls `$instance->exec()` and returns the result.
-   - `bootstrap.php` sends JSON content type when an array is returned, otherwise echoes strings.
+If no segment remains, the bare verb method is used:
 
-## Controller method resolution (`src/Controller.php`)
+```
+GET /report
+```
 
-`Controller::getMethod()` decides which PHP method to invoke:
-
-1. If the next route segment is non-empty and a method named `<segment>_<verb>` exists, it is chosen and the segment is consumed.
-2. Otherwise, if a method named exactly like the HTTP verb exists, it is chosen.
-3. Otherwise a 404 `RequestException` is thrown.
-
-Example mappings for controller `user`:
-
-| URL | HTTP method | Controller method |
-|-----|-------------|-------------------|
-| `/user` | GET | `get()` |
-| `/user/123` | GET | `get(123)` via `routeMapping` |
-| `/user/authenticate` | POST | `authenticate_post(...)` |
-| `/user/auth/google` | GET | `auth_get('google')` via `routeMapping` |
+```php
+public function get() { ... }
+```
 
 ## Parameter binding
 
-`Controller::getMethod()` reflects the chosen method and builds an argument list for each parameter:
+`getParamValue()` fills method parameters from three sources, in order:
 
-1. If `routeMapping` names this parameter and a matching path segment exists, use the segment.
-2. Else if the body contains the parameter name, use the body value.
-3. Else if the query string contains the parameter name, use the query value.
-4. Else if the parameter has a default value, use it.
-5. Else pass `null`.
+1. **URL segments** via `$routeMapping`.
+2. **JSON body** for `post`, `put`, `patch`.
+3. **Query string** for `get`, `head`, `delete`.
 
-`getParamValue()` then coerces the value to the parameter's declared type. Classes are instantiated via `new $type($value)`. `'false'` strings are converted to boolean `false`. Everything else uses `settype()`.
-
-## Route mapping syntax
-
-Controllers declare a protected `$routeMapping` array. The special key `all` applies to every method.
-
-```php
-protected $routeMapping = [
-    'all' => [ 'id' => 0 ],          // first segment → $id for all methods
-    'auth_get' => [ 'service' => 0 ], // first segment → $service only for auth_get
-];
-```
-
-The value is the zero-based index inside the remaining route array after the controller name.
-
-## ModelController routing (`src/ModelController.php`)
-
-`ModelController` extends `Controller` and exposes a generic REST interface over any `Model` subclass.
-
-Default mapping:
+`routeMapping` maps parameter names to URL segment indices:
 
 ```php
 protected $routeMapping = [ 'all' => [ 'id' => 0 ] ];
 ```
 
-Method mapping:
+This means `id` comes from `$route[0]` for every method (`all`).
 
-| HTTP method | ModelController method | Behaviour |
-|-------------|------------------------|-----------|
-| `HEAD` | `head($id)` | Existence check; returns `X-Count` header. |
-| `GET` | `get($id)` | Read one or list. |
-| `POST` | `post()` | Create record. |
-| `PATCH` | `patch($id)` | Partial update. |
-| `PUT` | `put($id)` | Upsert. |
-| `DELETE` | `delete($id)` | Delete record. |
+## Special routes
 
-If additional segments remain after the id, `ModelController::escalate()` treats the next segment as a related model name and forwards to a new `ModelController` for that related model, scoped by the parent record. This is how URLs like `/user/5/token` work.
+### `GET /openapi`
 
-## Error handling
+Returns the cached OpenAPI 3.0 specification as JSON:
 
-`Router::routeException()` builds the response for thrown exceptions:
+```json
+{
+  "openapi": "3.0.0",
+  "info": { ... },
+  "paths": { ... }
+}
+```
 
-- Sets the HTTP response code.
-- Includes a stack trace only when `app.env = dev`.
-- Returns JSON if the request asked for JSON, otherwise renders the `error` view.
+### `GET /openapi?format=yaml`
 
-All endpoint classes should throw `Phresto\Exception\RequestException` with an HTTP status code for client errors.
+Returns the same specification as YAML.
+
+### `GET /<controller>/discover`
+
+Still works, but now returns the OpenAPI fragment for that controller via `OpenApi::discoverClass()` instead of the old custom JSON discovery format.
+
+## Error responses
+
+The bootstrap catches `RequestException` and generic `Exception` and returns JSON with the corresponding HTTP code:
+
+```json
+{
+  "status": 404,
+  "message": "Not found"
+}
+```
+
+All errors are JSON; there is no HTML error page anymore.

@@ -1,5 +1,7 @@
 # Authentication and Permissions
 
+> **v2 baseline** — OAuth/social login has been removed. Authentication is now token-based only.
+
 Phresto ships with a `user` module that provides authentication and role-based access control. You can replace it or extend it for your own needs.
 
 ## How authentication works
@@ -81,15 +83,14 @@ Response:
 
 The token is also stored in a cookie named `prsid` for browser clients.
 
-## Social login
+## Registering users
 
-Configure OAuth credentials in `modules/user/config/social.ini`, then redirect users to:
-
+```bash
+curl -X POST \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"a@b.c","password":"secret"}' \
+  /user/register
 ```
-GET /user/auth/google?ret=/welcome.html
-```
-
-Supported services: Google, Facebook, GitHub, LinkedIn.
 
 ## Custom authorisation
 

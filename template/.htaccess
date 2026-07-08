@@ -4,25 +4,28 @@ php_value post_max_size 42M
 RewriteEngine On
 RewriteBase /
 
+# Serve existing static assets directly
 RewriteRule ^favicon(.*)$ static/favicon$1 [L]
 RewriteRule ^static/(.*)$ static/$1 [QSA,L]
 RewriteRule ^mysql/(.*)$ mysql/$1 [QSA,L]
 RewriteRule ^(.*)/static/(.*)$ $1/static/$2 [QSA,L]
 
+# Protect sensitive application paths and files
+RewriteRule ^config/.*$ - [F,L,NC]
+RewriteRule ^vendor/.*$ - [F,L,NC]
+RewriteRule ^modules/.*$ - [F,L,NC]
+RewriteRule ^migration/.*$ - [F,L,NC]
+RewriteRule ^scripts/.*$ - [F,L,NC]
+RewriteRule ^.*\.ini$ - [F,L,NC]
+RewriteRule ^composer\.(json|lock)$ - [F,L,NC]
+
+# Route everything else to the JSON REST bootstrap
 RewriteCond %{REQUEST_URI} ^(.*)$ [NC]
 RewriteRule ^ bootstrap.php?PHRESTOREQUESTPATH=%1 [QSA,L]
 
-# use code below instead of two lines above if your server
-# throws 500 error
+# Fallback for servers that throw 500 on the rule above:
 #
 #RewriteCond %{SCRIPT_FILENAME} !-f [OR]
 #RewriteCond %{SCRIPT_FILENAME} !^.*bootstrap.php$ [NC]
 #RewriteCond %{REQUEST_URI} ^(.*)$ [NC]
 #RewriteRule ^ bootstrap.php?PHRESTOREQUESTPATH=%1 [QSA,L]
-#
-#RewriteRule ^.*\.ini$ - [F,L,NC]
-#RewriteRule ^vendor/.*$ - [F,L,NC]
-#RewriteRule ^modules/.*$ - [F,L,NC]
-#RewriteRule ^lang/.*$ - [F,L,NC]
-#RewriteRule ^migration/.*$ - [F,L,NC]
-#RewriteRule ^scripts/.*$ - [F,L,NC]

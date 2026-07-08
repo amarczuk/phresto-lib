@@ -14,7 +14,8 @@ $functions = [
     '--upgrade/-up' => ['func' => 'upgrade', 'desc' => 'Updates Phresto project and built-in modules (preserves configs)'],
     '--install/-i [name]' => ['func' => 'install', 'desc' => 'Install module (composer package name required)'],
     '--update/-u [name]' => ['func' => 'update', 'desc' => 'Update module (composer package name required)'],
-    '--modules/-m' => ['func' => 'updatemodulesini', 'desc' => 'Updates/creates conf/modules.ini'],
+    '--modules/-m' => ['func' => 'updatemodulesini', 'desc' => 'Updates/creates config/modules.ini'],
+    '--discover/-d' => ['func' => 'discover', 'desc' => 'Rebuilds config/openapi.json API spec'],
     '--help/-h' => ['func' => 'help', 'desc' => 'Prints help information']
 ];
 
@@ -129,9 +130,6 @@ function newone($key)
         Phresto\Config::saveConfig('db', $db);
     }
 
-    echo "Install bower dependencies...\n";
-    passthru('bower install');
-
     echo "Done\n";
 }
 
@@ -149,14 +147,11 @@ function upgrade($key)
 
     copyDir(getPath([__DIR__, '..', 'template']), PHRESTO_ROOT, [
         '.ini',
-        DIRECTORY_SEPARATOR . 'lang' . DIRECTORY_SEPARATOR,
-        DIRECTORY_SEPARATOR . 'temp' . DIRECTORY_SEPARATOR,
+        DIRECTORY_SEPARATOR . 'config' . DIRECTORY_SEPARATOR,
+        DIRECTORY_SEPARATOR . 'migration' . DIRECTORY_SEPARATOR,
         '.htaccess'
     ]);
     echo "Project files updated.\n";
-
-    echo "Install bower dependencies...\n";
-    passthru('bower install');
 
     echo "Done\n";
 }
@@ -167,6 +162,17 @@ function updatemodulesini()
 
     Phresto\Utils::registerAutoload();
     Phresto\Utils::updateModules();
+    Phresto\OpenApi::buildSpec();
+
+    echo "Done\n";
+}
+
+function discover()
+{
+    echo "Rebuilding OpenAPI spec...\n";
+
+    Phresto\Utils::registerAutoload();
+    Phresto\OpenApi::buildSpec();
 
     echo "Done\n";
 }

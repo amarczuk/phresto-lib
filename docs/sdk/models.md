@@ -1,5 +1,7 @@
 # Defining Models
 
+> **v2 baseline** — Models are unchanged, but their metadata now feeds the OpenAPI 3.0 spec at `/openapi`. All output is JSON; use `filterJson()` to shape it.
+
 Models are the heart of Phresto. A model class describes data fields, defaults, relations, and indexes. Once a model exists, the framework automatically exposes REST endpoints for it.
 
 ## Minimal model
@@ -184,3 +186,7 @@ php scripts/create_models.php
 ```
 
 The script prints and executes the SQL needed to create or alter tables and constraints.
+
+## OpenAPI
+
+Model fields, relations, and calculated fields appear in the generated OpenAPI spec at `GET /openapi`. Keep `filterJson()` in mind when you want to hide internal fields from the JSON API.

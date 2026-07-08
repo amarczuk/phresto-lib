@@ -1,10 +1,12 @@
 # JavaScript SDK
 
+> **v2 baseline** — `phresto.js` is still available, but there is no bundled Explorer/Admin UI anymore. The helper is a thin Promise-based client for the JSON API.
+
 Phresto includes a small browser helper at `static/js/phresto.js` for consuming the JSON API from the frontend.
 
 ## Loading
 
-The file is included in the default view config's `[closingjs]` section. If you build your own page, include it manually:
+Include it manually in your SPA or static page:
 
 ```html
 <script src="/static/vendor/js-cookie/src/js.cookie.js"></script>
@@ -108,3 +110,11 @@ Authorization: Bearer <token_from_prsid_cookie>
 ```
 
 It uses `XMLHttpRequest` and wraps it in a Promise. `DateTime` fields are returned as ISO-8601 strings from the server.
+
+## Discovering endpoints
+
+Because there is no built-in Explorer UI anymore, use the OpenAPI spec with Swagger UI or import it into Postman:
+
+```bash
+curl http://localhost:8000/openapi
+```

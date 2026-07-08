@@ -1,115 +1,111 @@
-# Phresto Internal Architecture
+# Architecture
 
-Phresto is a small PHP REST framework built around convention-over-configuration routing, an in-memory service container, and module-based autoloading. This document describes the project layout and how the core pieces fit together.
-
-## Repository layout
-
-```
-phresto-lib/
-├── bin/phresto              CLI entry point
-├── composer.json            Package metadata (PSR-4 autoload: Phresto\ -> src/)
-├── README.md
-├── src/                     Framework core
-│   ├── Config.php
-│   ├── Container.php
-│   ├── Controller.php
-│   ├── CustomModelController.php
-│   ├── DBConnector.php
-│   ├── Model.php
-│   ├── ModelController.php
-│   ├── MySQLConnector.php
-│   ├── MySQLModel.php
-│   ├── Router.php
-│   ├── Utils.php
-│   ├── View.php
-│   ├── XMLParser.php
-│   ├── Exception/
-│   └── Interf/
-├── template/                Files copied into a new Phresto project
-│   ├── bootstrap.php
-│   ├── .htaccess
-│   ├── static/
-│   ├── view/
-│   ├── config/
-│   ├── modules/
-│   ├── scripts/
-│   └── migration/
-└── test/                    Unit tests
-```
+> **v2 baseline** — HTML templating and the Admin/Explorer UI are gone. Responses are JSON-only (YAML only for the OpenAPI spec). Discovery is now handled by `src/OpenApi.php` and served at `/openapi`.
 
 ## Request lifecycle
 
-1. **HTTP request hits `.htaccess`**
-   - Static files are served directly.
-   - Everything else is rewritten to `bootstrap.php?PHRESTOREQUESTPATH=<original_path>`.
+1. **Web server** rewrites everything to `template/bootstrap.php` (see [`.htaccess`](../../template/.htaccess)).
+2. **`bootstrap.php`** registers the autoloader, calls `Router::route()`, and emits a JSON response envelope.
+3. **`Router::route()`** parses the URL, resolves the controller, runs it, and returns a response array.
+4. **`Controller`** binds parameters, checks permissions, executes the method, and returns `Response::json(...)`.
+5. **`bootstrap.php`** sets `http_response_code()`, sends `Content-Type: application/json`, and writes the body.
 
-2. **`template/bootstrap.php` bootstraps the app**
-   - Defines `PHRESTO_ROOT`.
-   - Starts session and output buffering.
-   - Registers Composer autoload, then `Phresto\Utils::autoload()` for module classes.
-   - Sets the main view language.
-   - Calls `Phresto\Router::route()` and prints the result.
+```
+HTTP request
+    -> .htaccess -> bootstrap.php
+        -> Router::route()
+            -> Controller/ModelController
+                -> Response::json()
+    -> JSON response
+```
 
-3. **`Router::route()` parses the request**
-   - Determines HTTP method, path segments, query string, body, and headers.
-   - Handles CORS preflight if configured.
-   - Resolves the first path segment to either:
-     - A controller class: `Phresto\Modules\Controller\<name>`
-     - A model class: `Phresto\Modules\Model\<name>` (wrapped in `ModelController`)
-     - The configured `mainmodule` or `static/index.html` for the root path.
+## Main classes
 
-4. **Controller executes**
-   - `Controller::getMethod()` uses reflection to pick the method matching the HTTP verb.
-   - It binds route, body, and query parameters to method arguments.
-   - `auth()` is called; on failure a 401 is thrown.
-   - The method result is returned to the router.
+### `Router` (`src/Router.php`)
 
-5. **Response rendering**
-   - If the controller returns an array with `content-type` and `body`, `bootstrap.php` sends that directly (used for JSON).
-   - If it returns a string, it is echoed as-is (used for HTML views).
+`Router::route()` is the only entry point. It:
 
-## Core abstractions
+- Parses the request method, path segments, query string, body, and headers.
+- Loads `config/modules.ini`.
+- Determines if the first URL segment is a model (`modules/<x>/model/`) or a custom controller (`modules/<x>/controller/`).
+- Instantiates the right controller through `Container`.
+- Runs `exec()` and returns the response array.
 
-| Class | Responsibility |
-|-------|----------------|
-| `Router` | Parses HTTP requests, resolves endpoints, handles CORS and errors. |
-| `Controller` | Base class for HTTP endpoints; discovers methods, injects params, enforces auth. |
-| `ModelController` | Generic REST controller for any `Model` subclass. |
-| `CustomModelController` | Convenience base for giving a model a dedicated controller class. |
-| `Model` | Active-record-like entity with typed fields, defaults, relations, and JSON serialization. |
-| `MySQLModel` | `Model` implementation backed by MySQL. |
-| `DBConnector` / `MySQLConnector` | Database abstraction and connection management. |
-| `Container` | Simple reflection-based factory/cache used to instantiate classes. |
-| `Config` | Reads/writes INI configuration files and caches parsed values. |
-| `Utils` | Module discovery and autoloading helpers. |
-| `View` | Legacy HTML templating and JSON response helper. |
+Special routes:
 
-## Module system
+- `GET /openapi` — returns the cached OpenAPI 3.0 spec as JSON.
+- `GET /openapi?format=yaml` — returns the same spec as YAML.
 
-Modules live under `modules/<module_name>/` and may contain:
+### `Controller` (`src/Controller.php`)
 
-- `controller/` — HTTP endpoint classes in namespace `Phresto\Modules\Controller`.
-- `model/` — Data model classes in namespace `Phresto\Modules\Model`.
-- `class/` — Supporting classes in namespace `Phresto\Modules`.
-- `view/` — `.htm` templates.
-- `config/` — Module-specific INI files.
-- `static/` — Module-specific JS/CSS assets.
-- `lang/` — PHP language files.
+Base class for all custom controllers. Responsibilities:
 
-`Utils::updateModules()` scans these directories and writes a `config/modules.ini` registry. `Utils::autoload()` then resolves `Phresto\Modules\...` class names to the correct file at runtime.
+- Stores request context: `$reqType`, `$route`, `$body`, `$query`, `$headers`.
+- Resolves `$currentUser` from the `prsid` cookie or `Authorization` header.
+- Uses reflection to find the method matching the URL (`getMethod()`).
+- Binds method parameters from URL segments, body JSON, or query string.
+- Calls `auth($methodName, $args)` before executing a method.
+- Returns `Response::json($data)`.
 
-## Class loading
+The `discover_get()` method now returns a fragment of the OpenAPI spec for the current controller via `OpenApi::discoverClass()`.
 
-Three autoloaders are involved:
+### `ModelController` (`src/ModelController.php`)
 
-1. **Composer PSR-4** — loads framework classes from `src/` (`Phresto\...`).
-2. **`Utils::libAutoad`** — optional fallback loader for framework classes (rarely needed today).
-3. **`Utils::autoload`** — resolves user-defined module classes based on `config/modules.ini`.
+Framework-owned controller that exposes REST endpoints for any model. It maps HTTP verbs to CRUD methods:
 
-## Design notes
+| HTTP verb | Method | Purpose |
+|-----------|--------|---------|
+| HEAD | `head($id)` | existence / count |
+| GET | `get($id)` | read one, list, or read related |
+| POST | `post()` | create |
+| PATCH | `patch($id)` | partial update |
+| PUT | `put($id)` | upsert |
+| DELETE | `delete($id)` | delete |
 
-- The framework targets PHP 7.0+ and avoids external framework dependencies beyond `lusitanian/oauth`.
-- Routing is based on class/method naming conventions rather than explicit route definitions.
-- Models use static field descriptors rather than annotations or migrations for schema metadata.
-- The `Container` is a very lightweight DI/factory with optional caching.
-- Views and HTML templating are present but marked deprecated; most endpoints return JSON.
+When the URL escalates into a related model (`/product/5/reviews`), `ModelController` loads the parent model, validates the relation, and creates a new `ModelController` for the child.
+
+### `CustomModelController` (`src/CustomModelController.php`)
+
+User extension point. Extending it keeps all generic model REST endpoints while allowing custom methods like `stats_get()`.
+
+### `Response` (`src/Response.php`)
+
+Replaces the old `View` layer. Two public methods:
+
+```php
+Response::json( $data, $code = 200 );   // returns response array with application/json
+Response::yaml( $data, $code = 200 );   // returns response array with application/yaml
+```
+
+When `config/app.ini` has `debug=on`, captured `ob_*` output is appended under a `_debug` key in JSON responses. In production, debug output is discarded.
+
+### `OpenApi` (`src/OpenApi.php`)
+
+Generates the API specification:
+
+```php
+OpenApi::buildSpec();   // reflect everything and write config/openapi.json
+OpenApi::getSpec();     // return cached spec (rebuilds in dev mode)
+OpenApi::discoverClass( $className );
+OpenApi::discoverModel( $modelName );
+```
+
+The spec is rebuilt automatically in development (`env=dev`) when `Utils::registerAutoload()` runs. In production it is only rebuilt by running `vendor/bin/phresto -d` or `vendor/bin/phresto -m`.
+
+### `Utils` (`src/Utils.php`)
+
+- `updateModules()` scans `modules/` and writes `config/modules.ini`.
+- `registerAutoload()` registers the module autoloader and, in dev mode, rebuilds `config/openapi.json`.
+- `autoload()` resolves `Phresto\Modules\...` class names using the registry.
+
+### `Model` / `MySQLModel`
+
+See [`models.md`](models.md) and [`database.md`](database.md).
+
+## Removed in v2
+
+- `src/View.php` and the HTML templating pipeline.
+- `template/view/`, `template/lang/`, `template/bower.json`, `template/.bowerrc`, `template/static/index.html`.
+- `template/modules/admin/` and `template/modules/explorer/`.
+- `template/modules/user/class/` (social OAuth adapters), `template/modules/user/view/`, `template/modules/user/config/social.ini`.
+- `lusitanian/oauth` Composer dependency.

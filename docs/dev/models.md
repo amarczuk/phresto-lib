@@ -1,6 +1,6 @@
 # Models
 
-Phresto's model layer is an active-record-style abstraction. `Model` defines the contract and common behaviour; `MySQLModel` implements the persistence logic for MySQL.
+> **v2 baseline** — The model layer is unchanged, but its metadata is now used by `OpenApi` to build the API specification. `filterJson()` is the primary way to shape JSON output because there is no HTML view layer anymore.
 
 ## Base `Model` (`src/Model.php`)
 
@@ -162,3 +162,7 @@ The query builder (`getConds()`, `getNestedConds()`) produces SQL with named pla
 ### Type coercion
 
 `getTyped()` casts incoming values to the declared PHP type and handles `DateTime` construction. Boolean strings such as `'false'` become boolean `false`. Objects of the declared class are reused; otherwise `new $type($value)` is called.
+
+## OpenAPI generation from models
+
+`OpenApi::discoverModel($modelClass)` reads a model's `$_fields`, `$_relations`, and `$_calculated_fields` to produce an OpenAPI schema object and path items for the standard REST endpoints. This is merged into the cached `config/openapi.json` spec.

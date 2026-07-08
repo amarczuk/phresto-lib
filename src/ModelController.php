@@ -2,7 +2,7 @@
 
 namespace Phresto;
 use Phresto\Controller;
-use Phresto\View;
+use Phresto\Response;
 use Phresto\Exception\RequestException;
 use Phresto\Modules\Model\user;
 
@@ -18,7 +18,7 @@ class ModelController extends Controller {
 
 	protected static $type = 'model';
 
-	public function __construct( $modelName, $reqType, $route, $body, $bodyRaw, $query, $headers, Model $contextModel = null ) {
+	public function __construct( $modelName, $reqType, $route, $body, $bodyRaw, $query, $headers, ?Model $contextModel = null ) {
 		$this->modelName = $modelName;
 		$this->contextModel = $contextModel;
 		parent::__construct( $reqType, $route, $body, $bodyRaw, $query, $headers );
@@ -28,7 +28,7 @@ class ModelController extends Controller {
 		list( $method, $args ) = $this->getMethod();
 		$this->methodName = $method->name;
 		if ( !$this->auth( $method->name, $args ) ) {
-			throw new Exception\RequestException( LAN_HTTP_UNAUTHORIZED, 401 );
+			throw new Exception\RequestException( 'Unauthorized', 401 );
 		}
 
 		if ( $this->hasNextRoute() ) {
@@ -41,7 +41,7 @@ class ModelController extends Controller {
 			return $method->invokeArgs( $this, $args );
 		} catch ( \TypeError $error ) {
             error_log( $error->getMessage() );
-			throw new Exception\RequestException( LAN_HTTP_BAD_REQUEST, 400 );
+			throw new Exception\RequestException( 'Bad request', 400 );
 		}
 	}
 
@@ -74,7 +74,7 @@ class ModelController extends Controller {
 
 		$thisModelName = $this->modelName;
 		if ( !$thisModel->getIndex() || !$thisModelName::isRelated( $model ) ) {
-			throw new RequestException( LAN_HTTP_NOT_FOUND, 404 );
+			throw new RequestException( 'Not found', 404 );
 		}
 
 		$modelClass = 'Phresto\\Modules\\Model\\' . $model;
@@ -161,7 +161,7 @@ class ModelController extends Controller {
 	* @return object
 	*/
 	protected function discover_get() {
-		return $this->jsonResponse( static::discover( false, $this->modelName ) );
+		return Response::json( OpenApi::discoverModel( $this->modelName ) );
 	}
 
 	/**
@@ -189,7 +189,7 @@ class ModelController extends Controller {
 		}
 
 		if ( empty( $modelInstance->getIndex() ) ) {
-			throw new RequestException( LAN_HTTP_NOT_FOUND, 404 );
+			throw new RequestException( 'Not found', 404 );
 		}
 
 		header( 'X-Count: 1' );
@@ -204,7 +204,7 @@ class ModelController extends Controller {
 	public function get( $id = null ) {
 		if ( empty( $id ) && empty( $this->contextModel ) ) {
 			$modelName = $this->modelName;
-			return $this->jsonResponse( $modelName::find( $this->query ) );
+			return Response::json( $modelName::find( $this->query ) );
 		}
 
 		$modelInstance = Container::{$this->modelName}();
@@ -213,15 +213,15 @@ class ModelController extends Controller {
 		} else {
 			if ( empty( $id ) ) {
 				$modelName = $this->modelName;
-				return $this->jsonResponse( $modelName::findRelated( $this->contextModel, $this->query ) );
+				return Response::json( $modelName::findRelated( $this->contextModel, $this->query ) );
 			}
 			$modelInstance->setRelatedById( $this->contextModel, $id );
 		}
 
 		if ( empty( $modelInstance->getIndex() ) ) {
-			throw new RequestException( LAN_HTTP_NOT_FOUND, 404 );
+			throw new RequestException( 'Not found', 404 );
 		}
-		return $this->jsonResponse( $modelInstance );
+		return Response::json( $modelInstance );
 	}
 
 	/**
@@ -235,7 +235,7 @@ class ModelController extends Controller {
 		if ( !empty( $this->contextModel ) ) {
 			$relation = $modelInstance->getRelation( $this->contextModel->getName() );
 			if ( in_array( $relation['type'], ['1:n', '1>1'] ) ) {
-				throw new RequestException( LAN_HTTP_BAD_REQUEST, 400 );
+				throw new RequestException( 'Bad request', 400 );
 			}
 
 			$fk = $relation['index'];
@@ -244,7 +244,7 @@ class ModelController extends Controller {
 		}
 
 		$modelInstance->save();
-		return $this->jsonResponse( $modelInstance );
+		return Response::json( $modelInstance );
 	}
 
 	/**
@@ -255,24 +255,24 @@ class ModelController extends Controller {
 	*/
 	public function patch( $id = null ) {
 		if ( !empty( $this->contextModel ) ) {
-			throw new RequestException( LAN_HTTP_BAD_REQUEST, 400 );
+			throw new RequestException( 'Bad request', 400 );
 		}
 
 		if ( empty( $id ) ) {
-			throw new RequestException( LAN_HTTP_NOT_FOUND, 404 );
+			throw new RequestException( 'Not found', 404 );
 		}
 
 		if ( empty( $this->body ) ) {
-			throw new RequestException( LAN_HTTP_NO_CONTENT, 204 );
+			throw new RequestException( 'No content', 204 );
 		}
 
 		$modelInstance = Container::{$this->modelName}( $id );
 		if ( empty( $modelInstance->id ) ) {
-			throw new RequestException( LAN_HTTP_NOT_FOUND, 404 );
+			throw new RequestException( 'Not found', 404 );
 		}
 		$modelInstance->update( $this->body );
 		$modelInstance->save();
-		return $this->jsonResponse( $modelInstance );
+		return Response::json( $modelInstance );
 	}
 
 	/**
@@ -283,17 +283,17 @@ class ModelController extends Controller {
 	*/
 	public function put( $id = null ) {
 		if ( !empty( $this->contextModel ) ) {
-			throw new RequestException( LAN_HTTP_BAD_REQUEST, 400 );
+			throw new RequestException( 'Bad request', 400 );
 		}
 
 		if ( empty( $this->body ) ) {
-			throw new RequestException( LAN_HTTP_NO_CONTENT, 204 );
+			throw new RequestException( 'No content', 204 );
 		}
 
 		$modelInstance = Container::{$this->modelName}( $id );
 		$modelInstance->update( $this->body );
 		$modelInstance->save();
-		return $this->jsonResponse( $modelInstance );
+		return Response::json( $modelInstance );
 	}
 
 	/**
@@ -303,7 +303,7 @@ class ModelController extends Controller {
 	*/
 	public function delete( $id = null ) {
 		if ( empty( $id ) ) {
-			throw new RequestException( LAN_HTTP_NOT_FOUND, 404 );
+			throw new RequestException( 'Not found', 404 );
 		}
 
 		$modelInstance = Container::{$this->modelName}();
@@ -315,10 +315,10 @@ class ModelController extends Controller {
 		}
 
 		if ( empty( $modelInstance->getIndex() ) ) {
-			throw new RequestException( LAN_HTTP_NOT_FOUND, 404 );
+			throw new RequestException( 'Not found', 404 );
 		}
 
 		$modelInstance->delete();
-		return $this->jsonResponse( $modelInstance );
+		return Response::json( $modelInstance );
 	}
 }

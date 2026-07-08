@@ -2,7 +2,7 @@
 
 namespace Phresto\Modules\Controller;
 use Phresto\CustomModelController;
-use Phresto\View;
+use Phresto\Response;
 
 /** 
 * Additional token's REST endpoints
@@ -20,6 +20,6 @@ class token extends CustomModelController {
 		$token = static::MODELCLASS;
 		$token::cleanExpired();
 
-		return View::jsonResponse( [ 'ok' => true ] );
+		return Response::json( [ 'ok' => true ] );
 	}
 }

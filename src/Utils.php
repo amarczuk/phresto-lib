@@ -53,6 +53,7 @@ class Utils {
 		if ( $app['app']['env'] == 'dev' ) {
 			Config::delConfig( 'modules' );
             self::updateModules();
+            OpenApi::buildSpec();
 		}
 		spl_autoload_register( 'Phresto\\Utils::autoload' );
 	}

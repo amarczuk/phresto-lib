@@ -2,7 +2,7 @@
 
 namespace Phresto;
 
-use Phresto\View;
+use Phresto\Response;
 use Phresto\Config;
 
 class Router {
@@ -65,18 +65,22 @@ class Router {
     		 !empty( $viewConf['app']['mainmodule'] ) &&
     		 class_exists( 'Phresto\\Modules\\Controller\\' . $viewConf['app']['mainmodule'] ) ) {
     		$instance = Container::{'Phresto\\Modules\\Controller\\' . $viewConf['app']['mainmodule']}( $reqType, $route, $body, $bodyRaw, $query, $headers );
-    	} else if ( file_exists( 'static/index.html' ) ) {
-    		return file_get_contents( 'static/index.html' );
     	} else {
-    		throw new Exception\RequestException( LAN_HTTP_NOT_FOUND, 404 );
+    		return Response::json( [ 'status' => 404, 'message' => 'Not found' ], 404 );
     	}
+    } else if ( $class === 'openapi' ) {
+		$spec = OpenApi::getSpec();
+		if ( isset( $query['format'] ) && $query['format'] === 'yaml' ) {
+			return Response::yaml( $spec );
+		}
+		return Response::json( $spec );
     } else {
 	    if ( class_exists( 'Phresto\\Modules\\Controller\\' . $class ) ) {
 	    	$instance = Container::{'Phresto\\Modules\\Controller\\' . $class}( $reqType, $route, $body, $bodyRaw, $query, $headers );
 	    } else if ( class_exists( 'Phresto\\Modules\\Model\\' . $class ) ) {
 	    	$instance = Container::ModelController( 'Phresto\\Modules\\Model\\' . $class, $reqType, $route, $body, $bodyRaw, $query, $headers );
 	    } else {
-	    	throw new Exception\RequestException( LAN_HTTP_NOT_FOUND, 404 );
+	    	throw new Exception\RequestException( 'Not found', 404 );
 	    }
 		}
 	  return $instance->exec();
@@ -99,8 +103,6 @@ class Router {
 	}
 
 	public static function routeException( $ex = 500, $message = '', $trace = '' ) {
-		http_response_code((int)$ex);
-
 		$app = Config::getConfig( 'app' );
 		if ( empty( $app['app']['env'] ) || $app['app']['env'] != 'dev' ) {
 			$trace = '';
@@ -111,13 +113,7 @@ class Router {
 			'message' => $message,
 			'trace' => $trace
 		];
-		if ( !empty( $_SERVER["CONTENT_TYPE"] ) && mb_strpos( $_SERVER["CONTENT_TYPE"], 'application/json' ) !== false ) {
-			return View::jsonResponse( $resp );
-		}
 
-		$view = View::getView('error');
-		$view->add('error', $resp);
-
-		return $view->get();
+		return Response::json( $resp, (int)$ex );
 	}
 }

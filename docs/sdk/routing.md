@@ -1,5 +1,7 @@
 # Routing and Endpoints
 
+> **v2 baseline** — Routing is unchanged, but every response is JSON and the OpenAPI 3.0 spec is available at `/openapi`.
+
 Phresto does not use a central route file. URLs map to classes and methods by naming convention.
 
 ## URL format
@@ -23,10 +25,11 @@ GET    /report/sales         # custom controller method
 
 ## Resolution order
 
-1. If the path is empty, serve `static/index.html` or the configured `mainmodule` controller.
-2. If a controller class `Phresto\Modules\Controller\&lt;name&gt;` exists, use it.
-3. If a model class `Phresto\Modules\Model\&lt;name&gt;` exists, wrap it in `ModelController`.
-4. Otherwise return 404.
+1. If a controller class `Phresto\Modules\Controller\&lt;name&gt;` exists, use it.
+2. If a model class `Phresto\Modules\Model\&lt;name&gt;` exists, wrap it in `ModelController`.
+3. Otherwise return 404.
+
+The empty root path (`/`) no longer serves `static/index.html`; it returns a JSON 404 unless you add a custom controller.
 
 ## HTTP verbs
 
@@ -96,6 +99,14 @@ cors=*
 
 Use `*` to allow any origin, or set a specific origin domain. Preflight `OPTIONS` requests are handled automatically.
 
-## Discovery endpoint
+## Discovery and the OpenAPI spec
 
-Every controller and model answers `GET /<name>/discover` with a JSON schema describing its endpoints and parameters. This is used by the built-in Explorer tool.
+The old per-endpoint `GET /<name>/discover` format has been replaced by a single OpenAPI 3.0 specification:
+
+```
+GET /openapi            # JSON spec
+GET /openapi?format=yaml # YAML spec
+GET /product/discover   # OpenAPI fragment for the product endpoints
+```
+
+Use the spec with Swagger UI, Postman, or any OpenAPI-compatible tool to explore and test the API.

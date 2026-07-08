@@ -224,7 +224,7 @@ class MySQLModel extends Model {
 
     public static function findRelated( Model $model, $query = null ) {
         if ( !static::isRelated( $model->getName() ) || empty( $model->getIndex() ) ) {
-            throw new RequestException( LAN_HTTP_BAD_REQUEST, 400 );
+            throw new RequestException( 'Bad request', 400 );
         }
 
         $db = MySQLConnector::getInstance( static::DB );
@@ -327,7 +327,7 @@ class MySQLModel extends Model {
 
     public static function countRelated( $model ) {
         if ( !static::isRelated( $model->getName() ) || empty( $model->getIndex() ) ) {
-            throw new RequestException( LAN_HTTP_BAD_REQUEST, 400 );
+            throw new RequestException( 'Bad request', 400 );
         }
 
         $db = MySQLConnector::getInstance( static::DB );

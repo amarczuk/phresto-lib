@@ -2,15 +2,17 @@
 
 define( 'PHRESTO_ROOT', __DIR__ );
 
-session_start();
 ob_start();
 
 require_once 'vendor/autoload.php';
 
 Phresto\Utils::registerAutoload();
-Phresto\View::setMainLanguage();
 
-$response = '';
+$response = [
+	'body' => json_encode( [ 'status' => 500, 'message' => 'Internal server error' ] ),
+	'content-type' => 'application/json',
+	'code' => 500
+];
 
 try {
 	$response = Phresto\Router::route();
@@ -20,12 +22,11 @@ try {
 	$response = Phresto\Router::routeException( 500, $e->getMessage(), $e->getTrace() );
 }
 
-if ( is_array( $response ) ) {
-	header( 'Content-Type: ' . $response['content-type'] );
-	ob_clean();
-	echo $response['body'];
-} else {
-	echo $response;
+if ( !empty( $response['code'] ) ) {
+	http_response_code( (int) $response['code'] );
 }
+header( 'Content-Type: ' . $response['content-type'] );
+ob_clean();
+echo $response['body'];
 
 ob_end_flush();

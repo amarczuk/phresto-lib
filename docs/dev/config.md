@@ -1,5 +1,7 @@
 # Configuration System
 
+> **v2 baseline** — `config/view.ini`, per-module view INI files, and `modules/user/config/social.ini` have been removed. A new cached file, `config/openapi.json`, is generated automatically.
+
 Phresto stores configuration in INI files. The `Config` class reads, caches, merges, and writes these files.
 
 ## File locations
@@ -37,24 +39,21 @@ Parsed configs are stored in a static cache keyed by path.
 
 | File | Purpose |
 |------|---------|
-| `config/app.ini` | Environment, debug, CORS, main module, token encryption password. |
+| `config/app.ini` | Environment, debug, CORS, token encryption password. |
 | `config/db.ini` | Database connection definitions. |
-| `config/view.ini` | HTML page metadata, CSS/JS includes, charset, language. |
 | `config/modules.ini` | Auto-generated registry of module files. |
-| `modules/*/config/view.ini` | Per-module view overrides. |
-| `modules/user/config/social.ini` | OAuth keys for social login. |
+| `config/openapi.json` | Auto-generated OpenAPI 3.0 spec. |
 
 ## Example `config/app.ini`
 
 ```ini
 [app]
-mainmodule=
 env=dev
 debug=on
 tokenEncryptionPass=phrestoToken
 ```
 
-When `env=dev`, module discovery is refreshed on every request (see `Utils::registerAutoload()`).
+When `env=dev`, module discovery and the OpenAPI spec are refreshed on every request (see `Utils::registerAutoload()`).
 
 ## Example `config/db.ini`
 
