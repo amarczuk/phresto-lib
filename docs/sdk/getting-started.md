@@ -6,7 +6,7 @@ Phresto is a PHP REST framework that turns models and controllers into HTTP endp
 
 ## Requirements
 
-- PHP 7.4 or newer
+- PHP 8.0 or newer
 - MySQL (for the default model backend)
 - Composer
 
@@ -105,3 +105,12 @@ curl "http://localhost:8000/openapi?format=yaml"
 3. Run `vendor/bin/phresto -m` to refresh `config/modules.ini` and `config/openapi.json`.
 4. Run `php scripts/create_models.php` to update the database schema.
 5. Call the endpoints from your frontend using `phresto.js` or any HTTP client.
+
+## Code style
+
+All PHP files in a Phresto project use `declare(strict_types=1)` and follow PSR-12. If you installed dev dependencies, you can check and fix formatting with the provided Composer scripts:
+
+```bash
+composer cs-check
+composer cs-fix
+```

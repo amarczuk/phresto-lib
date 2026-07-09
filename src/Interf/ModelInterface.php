@@ -1,25 +1,34 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Phresto\Interf;
+
 use Phresto\Model;
 
-interface ModelInterface {
+interface ModelInterface
+{
+    public function __construct($option = null, $checkIfNew = true);
 
-	public function __construct( $option = null, $checkIfNew = true );
+    public static function find($query);
 
-	public static function find( $query );
-	public static function findRelated( Model $model, $query = null );
+    public static function findRelated(Model $model, $query = null);
 
-	public function save();
-	public function delete();
-	public function setIndex( $id );
+    public function save();
 
-	public static function getIndexField();
-	public static function getFields();
-	public function getIndex();
+    public function delete();
 
-	public function __set( $name, $value );
-	public function __get( $name );
-	public function __isset ( $name );
+    public function setIndex($id);
 
+    public static function getIndexField();
+
+    public static function getFields();
+
+    public function getIndex();
+
+    public function __set($name, $value);
+
+    public function __get($name);
+
+    public function __isset($name);
 }

@@ -1,324 +1,357 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Phresto;
-use Phresto\Controller;
-use Phresto\Response;
+
 use Phresto\Exception\RequestException;
-use Phresto\Modules\Model\user;
 
-class ModelController extends Controller {
+class ModelController extends Controller
+{
+    public const CLASSNAME = __CLASS__;
 
-	const CLASSNAME = __CLASS__;
+    protected $routeMapping = [ 'all' => [ 'id' => 0 ] ];
 
-	protected $routeMapping = [ 'all' => [ 'id' => 0 ] ];
+    protected $modelName;
 
-	protected $modelName;
-	protected $contextModel;
-	protected $methodName;
+    protected $contextModel;
 
-	protected static $type = 'model';
+    protected $methodName;
 
-	public function __construct( $modelName, $reqType, $route, $body, $bodyRaw, $query, $headers, ?Model $contextModel = null ) {
-		$this->modelName = $modelName;
-		$this->contextModel = $contextModel;
-		parent::__construct( $reqType, $route, $body, $bodyRaw, $query, $headers );
-	}
+    protected static $type = 'model';
 
-	public function exec() {
-		list( $method, $args ) = $this->getMethod();
-		$this->methodName = $method->name;
-		if ( !$this->auth( $method->name, $args ) ) {
-			throw new Exception\RequestException( 'Unauthorized', 401 );
-		}
+    public function __construct($modelName, $reqType, $route, $body, $bodyRaw, $query, $headers, ?Model $contextModel = null)
+    {
+        $this->modelName = $modelName;
+        $this->contextModel = $contextModel;
+        parent::__construct($reqType, $route, $body, $bodyRaw, $query, $headers);
+    }
 
-		if ( $this->hasNextRoute() ) {
-			$route = $this->getNextRoute();
-			return $this->escalate( ( !empty( $this->route[0] ) ) ? $this->route[0] : 0, $route[0] );
-		}
+    public function exec()
+    {
+        list($method, $args) = $this->getMethod();
+        $this->methodName = $method->name;
+        if (!$this->auth($method->name, $args)) {
+            throw new Exception\RequestException('Unauthorized', 401);
+        }
 
-		$method->setAccessible( true );
-		try {
-			return $method->invokeArgs( $this, $args );
-		} catch ( \TypeError $error ) {
-            error_log( $error->getMessage() );
-			throw new Exception\RequestException( 'Bad request', 400 );
-		}
-	}
+        if ($this->hasNextRoute()) {
+            $route = $this->getNextRoute();
 
-	protected function hasNextRoute() {
-		$routeMapping = $this->getRouteMapping( $this->methodName );
-		return count( $routeMapping ) < count( $this->route );
-	}
+            return $this->escalate((!empty($this->route[0])) ? $this->route[0] : 0, $route[0]);
+        }
 
-	protected function auth( $methodName, $args = null ) {
-		return $this->currentUser->hasAccess( $this->modelName, $methodName );
-	}
+        $method->setAccessible(true);
 
-	protected function getNextRoute() {
-		$routeMapping = $this->getRouteMapping( $this->methodName );
-		$cnt = count( $routeMapping );
-		$route = $this->route;
-		for ( $i = 0; $i < $cnt; $i++ ) {
-			array_shift( $route );
-		}
-		return $route;
-	}
+        try {
+            return $method->invokeArgs($this, $args);
+        } catch (\TypeError $error) {
+            error_log($error->getMessage());
 
-	protected function escalate( $id, $model ) {
-		$thisModel = Container::{$this->modelName}();
-		if ( !empty( $this->contextModel ) ) {
-			$thisModel->setRelatedById( $this->contextModel, $id );
-		} else {
-			$thisModel->setById( $id );
-		}
+            throw new Exception\RequestException('Bad request', 400);
+        }
+    }
 
-		$thisModelName = $this->modelName;
-		if ( !$thisModel->getIndex() || !$thisModelName::isRelated( $model ) ) {
-			throw new RequestException( 'Not found', 404 );
-		}
+    protected function hasNextRoute()
+    {
+        $routeMapping = $this->getRouteMapping($this->methodName);
 
-		$modelClass = 'Phresto\\Modules\\Model\\' . $model;
-		$newRoute = $this->getNextRoute();
-		array_shift( $newRoute );
-		$modelContr = Container::{'Phresto\\ModelController'}( $modelClass, $this->reqType, $newRoute, $this->body, $this->bodyRaw, $this->query, $this->headers, $thisModel );
-		return $modelContr->exec();
-	}
+        return count($routeMapping) < count($this->route);
+    }
 
-	protected static function getParameters( $method, $className ) {
-		$params = $method->getParameters();
+    protected function auth($methodName, $args = null)
+    {
+        return $this->currentUser->hasAccess($this->modelName, $methodName);
+    }
 
-		if ( in_array( $method->name, ['post', 'put', 'patch'] ) ) {
-			$reflection = new \ReflectionClass( $className );
-			$staticProps = $reflection->getStaticProperties();
-			$modelFields = $staticProps['_fields'];
-			foreach ( $modelFields as $key => $value) {
-				$params[] = [ 'name' => $key, 'type' => (is_array($value)) ? $value['type'] : $value ];
-			}
+    protected function getNextRoute()
+    {
+        $routeMapping = $this->getRouteMapping($this->methodName);
+        $cnt = count($routeMapping);
+        $route = $this->route;
+        for ($i = 0; $i < $cnt; $i++) {
+            array_shift($route);
+        }
 
-		}
+        return $route;
+    }
 
-		return $params;
-	}
+    protected function escalate($id, $model)
+    {
+        $thisModel = Container::{$this->modelName}();
+        if (!empty($this->contextModel)) {
+            $thisModel->setRelatedById($this->contextModel, $id);
+        } else {
+            $thisModel->setById($id);
+        }
 
-	protected static function getRelatedEndpoints( $className ) {
-		$getModelDisc = function( $paths, $model ) {
-			foreach ( $paths as $path ) {
-				if ( $path['endpoint'] == $model ) {
-					return $path;
-				}
-			}
+        $thisModelName = $this->modelName;
+        if (!$thisModel->getIndex() || !$thisModelName::isRelated($model)) {
+            throw new RequestException('Not found', 404);
+        }
 
-			return null;
-		};
+        $modelClass = 'Phresto\\Modules\\Model\\' . $model;
+        $newRoute = $this->getNextRoute();
+        array_shift($newRoute);
+        $modelContr = Container::{'Phresto\\ModelController'}($modelClass, $this->reqType, $newRoute, $this->body, $this->bodyRaw, $this->query, $this->headers, $thisModel);
 
-		$reflection = new \ReflectionClass( $className );
-		$staticProps = $reflection->getStaticProperties();
-		if ( empty( $staticProps['_relations'] ) ) {
-			return [];
-		}
+        return $modelContr->exec();
+    }
 
-		$tmp = explode( '\\', ( isset( $className ) ) ? $className : static::CLASSNAME );
-		$classNameOnly = array_pop( $tmp );
+    protected static function getParameters($method, $className)
+    {
+        $params = $method->getParameters();
 
-		$methodsAllowed = [
-			'1:n' => [ 'head', 'get', 'post', 'delete' ],
-			'n:n' => [ 'head', 'get', 'post', 'delete' ],
-			'1:1' => [ 'head', 'get', 'post', 'delete' ],
-			'1>1' => [ 'head', 'get', 'post', 'delete' ],
-			'1<1' => [ 'head', 'get' ],
-			'n:1' => [ 'head', 'get' ]
-		];
+        if (in_array($method->name, ['post', 'put', 'patch'])) {
+            $reflection = new \ReflectionClass($className);
+            $staticProps = $reflection->getStaticProperties();
+            $modelFields = $staticProps['_fields'];
+            foreach ($modelFields as $key => $value) {
+                $params[] = [ 'name' => $key, 'type' => (is_array($value)) ? $value['type'] : $value ];
+            }
 
-		$relatedModels = $staticProps['_relations'];
-		$endpoints = [];
-		foreach ( $relatedModels as $name => $relation ) {
+        }
+
+        return $params;
+    }
+
+    protected static function getRelatedEndpoints($className)
+    {
+        $getModelDisc = function ($paths, $model) {
+            foreach ($paths as $path) {
+                if ($path['endpoint'] == $model) {
+                    return $path;
+                }
+            }
+
+            return null;
+        };
+
+        $reflection = new \ReflectionClass($className);
+        $staticProps = $reflection->getStaticProperties();
+        if (empty($staticProps['_relations'])) {
+            return [];
+        }
+
+        $tmp = explode('\\', (isset($className)) ? $className : static::CLASSNAME);
+        $classNameOnly = array_pop($tmp);
+
+        $methodsAllowed = [
+            '1:n' => [ 'head', 'get', 'post', 'delete' ],
+            'n:n' => [ 'head', 'get', 'post', 'delete' ],
+            '1:1' => [ 'head', 'get', 'post', 'delete' ],
+            '1>1' => [ 'head', 'get', 'post', 'delete' ],
+            '1<1' => [ 'head', 'get' ],
+            'n:1' => [ 'head', 'get' ],
+        ];
+
+        $relatedModels = $staticProps['_relations'];
+        $endpoints = [];
+        foreach ($relatedModels as $name => $relation) {
             $model = $relation['model'];
-			$paths = ModelController::discover( false, "\\Phresto\\Modules\\Model\\{$model}", false );
-			$modelDiscovery = $getModelDisc( $paths, $model );
-			if ( empty( $modelDiscovery ) || empty( $modelDiscovery['methods'] ) ) {
-				continue;
-			}
+            $paths = ModelController::discover(false, "\\Phresto\\Modules\\Model\\{$model}", false);
+            $modelDiscovery = $getModelDisc($paths, $model);
+            if (empty($modelDiscovery) || empty($modelDiscovery['methods'])) {
+                continue;
+            }
 
-			$classMethods = $modelDiscovery['methods'];
-			$methods = [];
+            $classMethods = $modelDiscovery['methods'];
+            $methods = [];
 
-			while ( !empty( $classMethods ) ) {
-				$method = array_shift( $classMethods );
-				if ( in_array( $method['name'], $methodsAllowed[$relation['type'] ] ) ) {
-					$methods[] = $method;
-				}
-			}
+            while (!empty($classMethods)) {
+                $method = array_shift($classMethods);
+                if (in_array($method['name'], $methodsAllowed[$relation['type'] ])) {
+                    $methods[] = $method;
+                }
+            }
 
-			$endpoint = $classNameOnly . '/_id_/' . $model;
-			$endpoints[$endpoint] = [ 'endpoint' => $endpoint, 'methods' => $methods, 'description' => $modelDiscovery['description'] ];
-		}
+            $endpoint = $classNameOnly . '/_id_/' . $model;
+            $endpoints[$endpoint] = [ 'endpoint' => $endpoint, 'methods' => $methods, 'description' => $modelDiscovery['description'] ];
+        }
 
-		return $endpoints;
-	}
+        return $endpoints;
+    }
 
-	/**
-	* prints model description
-	* @return object
-	*/
-	protected function discover_get() {
-		return Response::json( OpenApi::discoverModel( $this->modelName ) );
-	}
+    /**
+    * prints model description
+    * @return object
+    */
+    protected function discover_get()
+    {
+        return Response::json(OpenApi::discoverModel($this->modelName));
+    }
 
-	/**
-	* check if record exists, returns count of the collection in X-Count header
-	* @param id record's index
-	* @return 200 - found or 404 - not found
-	*/
-	public function head( $id = null ) {
-		$modelInstance = Container::{$this->modelName}();
+    /**
+    * check if record exists, returns count of the collection in X-Count header
+    * @param id record's index
+    * @return 200 - found or 404 - not found
+    */
+    public function head($id = null)
+    {
+        $modelInstance = Container::{$this->modelName}();
 
-		if ( empty( $id ) && empty( $this->contextModel ) ) {
-			header( 'X-Count: ' . $modelInstance::count( $this->query ) );
-			return null;
-		}
+        if (empty($id) && empty($this->contextModel)) {
+            header('X-Count: ' . $modelInstance::count($this->query));
 
-		if ( empty( $this->contextModel ) ) {
-			$modelInstance->setById( $id );
-		} else {
-			if ( empty( $id ) ) {
-				header( 'X-Count: ' . $modelInstance::countRelated( $this->contextModel ) );
-				return null;
-			}
+            return null;
+        }
 
-			$modelInstance->setRelatedById( $this->contextModel, $id );
-		}
+        if (empty($this->contextModel)) {
+            $modelInstance->setById($id);
+        } else {
+            if (empty($id)) {
+                header('X-Count: ' . $modelInstance::countRelated($this->contextModel));
 
-		if ( empty( $modelInstance->getIndex() ) ) {
-			throw new RequestException( 'Not found', 404 );
-		}
+                return null;
+            }
 
-		header( 'X-Count: 1' );
-		return null;
-	}
+            $modelInstance->setRelatedById($this->contextModel, $id);
+        }
 
-	/**
-	* get record
-	* @param id record's index (all if empty)
-	* @return object / array of objects
-	*/
-	public function get( $id = null ) {
-		if ( empty( $id ) && empty( $this->contextModel ) ) {
-			$modelName = $this->modelName;
-			return Response::json( $modelName::find( $this->query ) );
-		}
+        if (empty($modelInstance->getIndex())) {
+            throw new RequestException('Not found', 404);
+        }
 
-		$modelInstance = Container::{$this->modelName}();
-		if ( empty( $this->contextModel ) ) {
-			$modelInstance->setById( $id );
-		} else {
-			if ( empty( $id ) ) {
-				$modelName = $this->modelName;
-				return Response::json( $modelName::findRelated( $this->contextModel, $this->query ) );
-			}
-			$modelInstance->setRelatedById( $this->contextModel, $id );
-		}
+        header('X-Count: 1');
 
-		if ( empty( $modelInstance->getIndex() ) ) {
-			throw new RequestException( 'Not found', 404 );
-		}
-		return Response::json( $modelInstance );
-	}
+        return null;
+    }
 
-	/**
-	* create record
-	* @param json model properties
-	* @return object created record
-	*/
-	public function post() {
-		$modelInstance = Container::{$this->modelName}( $this->body );
+    /**
+    * get record
+    * @param id record's index (all if empty)
+    * @return object / array of objects
+    */
+    public function get($id = null)
+    {
+        if (empty($id) && empty($this->contextModel)) {
+            $modelName = $this->modelName;
 
-		if ( !empty( $this->contextModel ) ) {
-			$relation = $modelInstance->getRelation( $this->contextModel->getName() );
-			if ( in_array( $relation['type'], ['1:n', '1>1'] ) ) {
-				throw new RequestException( 'Bad request', 400 );
-			}
+            return Response::json($modelName::find($this->query));
+        }
 
-			$fk = $relation['index'];
-			$related = $relation['field'];
-			$modelInstance->$fk = $this->contextModel->$related;
-		}
+        $modelInstance = Container::{$this->modelName}();
+        if (empty($this->contextModel)) {
+            $modelInstance->setById($id);
+        } else {
+            if (empty($id)) {
+                $modelName = $this->modelName;
 
-		$modelInstance->save();
-		return Response::json( $modelInstance );
-	}
+                return Response::json($modelName::findRelated($this->contextModel, $this->query));
+            }
+            $modelInstance->setRelatedById($this->contextModel, $id);
+        }
 
-	/**
-	* update record
-	* @param id id of record to update
-	* @param json model properties
-	* @return object updated record
-	*/
-	public function patch( $id = null ) {
-		if ( !empty( $this->contextModel ) ) {
-			throw new RequestException( 'Bad request', 400 );
-		}
+        if (empty($modelInstance->getIndex())) {
+            throw new RequestException('Not found', 404);
+        }
 
-		if ( empty( $id ) ) {
-			throw new RequestException( 'Not found', 404 );
-		}
+        return Response::json($modelInstance);
+    }
 
-		if ( empty( $this->body ) ) {
-			throw new RequestException( 'No content', 204 );
-		}
+    /**
+    * create record
+    * @param json model properties
+    * @return object created record
+    */
+    public function post()
+    {
+        $modelInstance = Container::{$this->modelName}($this->body);
 
-		$modelInstance = Container::{$this->modelName}( $id );
-		if ( empty( $modelInstance->id ) ) {
-			throw new RequestException( 'Not found', 404 );
-		}
-		$modelInstance->update( $this->body );
-		$modelInstance->save();
-		return Response::json( $modelInstance );
-	}
+        if (!empty($this->contextModel)) {
+            $relation = $modelInstance->getRelation($this->contextModel->getName());
+            if (in_array($relation['type'], ['1:n', '1>1'])) {
+                throw new RequestException('Bad request', 400);
+            }
 
-	/**
-	* upsert record
-	* @param id (optional)
-	* @param json model properties
-	* @return object updated record
-	*/
-	public function put( $id = null ) {
-		if ( !empty( $this->contextModel ) ) {
-			throw new RequestException( 'Bad request', 400 );
-		}
+            $fk = $relation['index'];
+            $related = $relation['field'];
+            $modelInstance->$fk = $this->contextModel->$related;
+        }
 
-		if ( empty( $this->body ) ) {
-			throw new RequestException( 'No content', 204 );
-		}
+        $modelInstance->save();
 
-		$modelInstance = Container::{$this->modelName}( $id );
-		$modelInstance->update( $this->body );
-		$modelInstance->save();
-		return Response::json( $modelInstance );
-	}
+        return Response::json($modelInstance);
+    }
 
-	/**
-	* delete record
-	* @param id
-	* @return object deleted record
-	*/
-	public function delete( $id = null ) {
-		if ( empty( $id ) ) {
-			throw new RequestException( 'Not found', 404 );
-		}
+    /**
+    * update record
+    * @param id id of record to update
+    * @param json model properties
+    * @return object updated record
+    */
+    public function patch($id = null)
+    {
+        if (!empty($this->contextModel)) {
+            throw new RequestException('Bad request', 400);
+        }
 
-		$modelInstance = Container::{$this->modelName}();
+        if (empty($id)) {
+            throw new RequestException('Not found', 404);
+        }
 
-		if ( !empty( $this->contextModel ) ) {
-			$modelInstance->setRelatedById( $this->contextModel, $id );
-		} else {
-			$modelInstance->setById( $id );
-		}
+        if (empty($this->body)) {
+            throw new RequestException('No content', 204);
+        }
 
-		if ( empty( $modelInstance->getIndex() ) ) {
-			throw new RequestException( 'Not found', 404 );
-		}
+        $modelInstance = Container::{$this->modelName}($id);
+        if (empty($modelInstance->id)) {
+            throw new RequestException('Not found', 404);
+        }
+        $modelInstance->update($this->body);
+        $modelInstance->save();
 
-		$modelInstance->delete();
-		return Response::json( $modelInstance );
-	}
+        return Response::json($modelInstance);
+    }
+
+    /**
+    * upsert record
+    * @param id (optional)
+    * @param json model properties
+    * @return object updated record
+    */
+    public function put($id = null)
+    {
+        if (!empty($this->contextModel)) {
+            throw new RequestException('Bad request', 400);
+        }
+
+        if (empty($this->body)) {
+            throw new RequestException('No content', 204);
+        }
+
+        $modelInstance = Container::{$this->modelName}($id);
+        $modelInstance->update($this->body);
+        $modelInstance->save();
+
+        return Response::json($modelInstance);
+    }
+
+    /**
+    * delete record
+    * @param id
+    * @return object deleted record
+    */
+    public function delete($id = null)
+    {
+        if (empty($id)) {
+            throw new RequestException('Not found', 404);
+        }
+
+        $modelInstance = Container::{$this->modelName}();
+
+        if (!empty($this->contextModel)) {
+            $modelInstance->setRelatedById($this->contextModel, $id);
+        } else {
+            $modelInstance->setById($id);
+        }
+
+        if (empty($modelInstance->getIndex())) {
+            throw new RequestException('Not found', 404);
+        }
+
+        $modelInstance->delete();
+
+        return Response::json($modelInstance);
+    }
 }

@@ -1,23 +1,26 @@
 <?php
 
-namespace Phresto;
-use Phresto\MySQLModel;
+declare(strict_types=1);
 
-define( 'PHRESTO_ROOT', __DIR__ . '/../temp/' );
+namespace Phresto;
+
+define('PHRESTO_ROOT', __DIR__ . '/../temp/');
 require_once __DIR__ . '/../src/Utils.php';
 
 Utils::registerLibAutoload();
 Utils::registerAutoload();
 
-class TestModel extends MySQLModel {
-    const CLASSNAME = __CLASS__;
+class TestModel extends MySQLModel
+{
+    public const CLASSNAME = __CLASS__;
 
-    const DB = 'mockmysql';
-    const NAME = 'test';
-    const INDEX = 'id';
-    const COLLECTION = 'test';
+    public const DB = 'mockmysql';
+    public const NAME = 'test';
+    public const INDEX = 'id';
+    public const COLLECTION = 'test';
 
     protected static $_currentUser = null;
+
     protected static $_fields = [ 'id' => 'int',
                                   'field1' => 'string',
                                   'field2' => 'string',
@@ -29,68 +32,79 @@ class MockMySQLConnector extends DBConnector
 {
     public static $queries = [];
 
-    public static function reset() {
+    public static function reset()
+    {
         static::$queries = [];
     }
 
-    public function connect( $options ) {
+    public function connect($options)
+    {
         return true;
     }
 
-    public function escape( $var ) {
+    public function escape($var)
+    {
         return $var;
     }
 
-    public function bind( $query, $variables ) {
+    public function bind($query, $variables)
+    {
         return $query;
     }
 
-    public function query( $query, $bindings = [] ) {
+    public function query($query, $bindings = [])
+    {
         static::$queries[] = [ 'query' => $query, 'bindings' => $bindings ];
+
         return 'result';
     }
 
-    public function getNext( $r ) {
+    public function getNext($r)
+    {
         return false;
     }
 }
 
-$mockDb = new MockMySQLConnector( 'mockmysql', [] );
+$mockDb = new MockMySQLConnector('mockmysql', []);
 
-function test1() {
+function test1()
+{
     MockMySQLConnector::reset();
     $query = ['where' => [ 'field1' => 'abc', 'field2' => 'bda']];
     TestModel::find($query);
     var_dump(MockMySQLConnector::$queries);
 }
 
-function test2() {
+function test2()
+{
     MockMySQLConnector::reset();
     $query = ['where' => [
         'field1' => 'abc',
         'or' => [
             'field1' => 'bda',
-            'field2' => 'ggg'
-        ]
+            'field2' => 'ggg',
+        ],
     ]];
     TestModel::find($query);
     var_dump(MockMySQLConnector::$queries);
 }
 
-function test3() {
+function test3()
+{
     MockMySQLConnector::reset();
     $query = ['where' => [
         'field1' => 'abc',
         'or' => [
             ['field1' => 'bda'],
-            ['field1' => 'ggg']
-        ]
+            ['field1' => 'ggg'],
+        ],
     ]];
     TestModel::find($query);
     var_dump(MockMySQLConnector::$queries);
 }
 
-function test4() {
+function test4()
+{
     MockMySQLConnector::reset();
     $query = ['where' => [
         'field1' => 'abc',
@@ -100,9 +114,9 @@ function test4() {
             'field2' => 'ccc',
             'and' => [
                 'field1' => ['<>', 'sss'],
-                'field2' => ['in', ['x', 'y', 'z']]
-            ]
-        ]
+                'field2' => ['in', ['x', 'y', 'z']],
+            ],
+        ],
     ]];
     TestModel::find($query);
     var_dump(MockMySQLConnector::$queries);

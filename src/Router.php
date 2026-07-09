@@ -1,119 +1,124 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Phresto;
 
-use Phresto\Response;
-use Phresto\Config;
-
-class Router {
-
-	public static function route() {
-		$reqType = mb_strtolower( $_SERVER['REQUEST_METHOD'] );
-        $route = explode( '/', trim( $_GET['PHRESTOREQUESTPATH'], '/' ) );
-        $class = array_shift( $route );
+class Router
+{
+    public static function route()
+    {
+        $reqType = mb_strtolower($_SERVER['REQUEST_METHOD']);
+        $route = explode('/', trim($_GET['PHRESTOREQUESTPATH'], '/'));
+        $class = array_shift($route);
         $query = $_GET;
-        unset( $query['PHRESTOREQUESTPATH'] );
+        unset($query['PHRESTOREQUESTPATH']);
         $bodyRaw = '';
         $body = [];
         $headers = static::getRequestHeaders();
-		$viewConf = Config::getConfig( 'app' );
+        $viewConf = Config::getConfig('app');
 
-		$origin = (is_array($viewConf['app']) && array_key_exists('cors', $viewConf['app'])) ? $viewConf['app']['cors'] : null;
-		if ($origin == '*' && !empty($_SERVER['HTTP_ORIGIN'])) {
-			$origin = $_SERVER['HTTP_ORIGIN'];
-		}
-
-		if (!empty($origin) && $reqType == 'options') {
-			header("Access-Control-Allow-Origin: {$origin}");
-			header("Access-Control-Allow-Credentials: true");
-			header("Access-Control-Expose-Headers: *");
-			header('Access-Control-Allow-Methods: GET, PUT, PATCH, DELETE, POST, OPTIONS');
-			header('Access-Control-Allow-Headers: Origin, Content-Type, Authorization, Referer, User-Agent');
-			header('Access-Control-Max-Age: 1728000');
-			header('Content-Length: 0');
-			header('Content-Type: text/plain');
-			die();
-		}
-
-		if (!empty($origin)) {
-			header("Access-Control-Allow-Origin: {$origin}");
-			header("Access-Control-Allow-Credentials: true");
-			header('Access-Control-Allow-Headers: *');
-			header("Access-Control-Expose-Headers: *");
+        $origin = (is_array($viewConf['app']) && array_key_exists('cors', $viewConf['app'])) ? $viewConf['app']['cors'] : null;
+        if ($origin == '*' && !empty($_SERVER['HTTP_ORIGIN'])) {
+            $origin = $_SERVER['HTTP_ORIGIN'];
         }
 
-		if ( $reqType != 'get' && $reqType != 'delete' ) {
-      $bodyRaw = @file_get_contents('php://input');
+        if (!empty($origin) && $reqType == 'options') {
+            header("Access-Control-Allow-Origin: {$origin}");
+            header('Access-Control-Allow-Credentials: true');
+            header('Access-Control-Expose-Headers: *');
+            header('Access-Control-Allow-Methods: GET, PUT, PATCH, DELETE, POST, OPTIONS');
+            header('Access-Control-Allow-Headers: Origin, Content-Type, Authorization, Referer, User-Agent');
+            header('Access-Control-Max-Age: 1728000');
+            header('Content-Length: 0');
+            header('Content-Type: text/plain');
+            die();
+        }
 
-      if ( mb_strpos( $_SERVER["CONTENT_TYPE"], 'application/json' ) !== false ) {
-      	$body = json_decode( $bodyRaw, true );
-      }
+        if (!empty($origin)) {
+            header("Access-Control-Allow-Origin: {$origin}");
+            header('Access-Control-Allow-Credentials: true');
+            header('Access-Control-Allow-Headers: *');
+            header('Access-Control-Expose-Headers: *');
+        }
 
-      if ( empty( $body ) ) {
-      	$body = [];
-      	parse_str( $bodyRaw, $body );
-      }
+        if ($reqType != 'get' && $reqType != 'delete') {
+            $bodyRaw = @file_get_contents('php://input');
 
-      if ( empty( $body ) && !empty( $_POST ) ) {
-      	$body = $_POST;
-      	$bodyRaw = http_build_query( $_POST );
-      }
+            if (mb_strpos($_SERVER['CONTENT_TYPE'] ?? '', 'application/json') !== false) {
+                $body = json_decode($bodyRaw, true);
+            }
+
+            if (empty($body)) {
+                $body = [];
+                parse_str($bodyRaw, $body);
+            }
+
+            if (empty($body) && !empty($_POST)) {
+                $body = $_POST;
+                $bodyRaw = http_build_query($_POST);
+            }
+        }
+
+        if (empty($class)) {
+            if (is_array($viewConf['app'])
+                 && !empty($viewConf['app']['mainmodule'])
+                 && class_exists('Phresto\\Modules\\Controller\\' . $viewConf['app']['mainmodule'])) {
+                $instance = Container::{'Phresto\\Modules\\Controller\\' . $viewConf['app']['mainmodule']}($reqType, $route, $body, $bodyRaw, $query, $headers);
+            } else {
+                return Response::json([ 'status' => 404, 'message' => 'Not found' ], 404);
+            }
+        } elseif ($class === 'openapi') {
+            $spec = OpenApi::getSpec();
+            if (isset($query['format']) && $query['format'] === 'yaml') {
+                return Response::yaml($spec);
+            }
+
+            return Response::json($spec);
+        } else {
+            if (class_exists('Phresto\\Modules\\Controller\\' . $class)) {
+                $instance = Container::{'Phresto\\Modules\\Controller\\' . $class}($reqType, $route, $body, $bodyRaw, $query, $headers);
+            } elseif (class_exists('Phresto\\Modules\\Model\\' . $class)) {
+                $instance = Container::ModelController('Phresto\\Modules\\Model\\' . $class, $reqType, $route, $body, $bodyRaw, $query, $headers);
+            } else {
+                throw new Exception\RequestException('Not found', 404);
+            }
+        }
+
+        return $instance->exec();
     }
 
-		if ( empty( $class ) ) {
-    	if ( is_array( $viewConf['app'] ) &&
-    		 !empty( $viewConf['app']['mainmodule'] ) &&
-    		 class_exists( 'Phresto\\Modules\\Controller\\' . $viewConf['app']['mainmodule'] ) ) {
-    		$instance = Container::{'Phresto\\Modules\\Controller\\' . $viewConf['app']['mainmodule']}( $reqType, $route, $body, $bodyRaw, $query, $headers );
-    	} else {
-    		return Response::json( [ 'status' => 404, 'message' => 'Not found' ], 404 );
-    	}
-    } else if ( $class === 'openapi' ) {
-		$spec = OpenApi::getSpec();
-		if ( isset( $query['format'] ) && $query['format'] === 'yaml' ) {
-			return Response::yaml( $spec );
-		}
-		return Response::json( $spec );
-    } else {
-	    if ( class_exists( 'Phresto\\Modules\\Controller\\' . $class ) ) {
-	    	$instance = Container::{'Phresto\\Modules\\Controller\\' . $class}( $reqType, $route, $body, $bodyRaw, $query, $headers );
-	    } else if ( class_exists( 'Phresto\\Modules\\Model\\' . $class ) ) {
-	    	$instance = Container::ModelController( 'Phresto\\Modules\\Model\\' . $class, $reqType, $route, $body, $bodyRaw, $query, $headers );
-	    } else {
-	    	throw new Exception\RequestException( 'Not found', 404 );
-	    }
-		}
-	  return $instance->exec();
-	}
-
-	protected static function getRequestHeaders() {
-        if ( function_exists('apache_request_headers') ) {
+    protected static function getRequestHeaders()
+    {
+        if (function_exists('apache_request_headers')) {
             return apache_request_headers();
         }
 
-	    $headers = array();
-	    foreach( $_SERVER as $key => $value ) {
-	        if ( substr( $key, 0, 5 ) != 'HTTP_' ) {
-	            continue;
-	        }
-	        $header = str_replace( ' ', '-', ucwords( str_replace( '_', ' ', strtolower( substr( $key, 5 ) ) ) ) );
-	        $headers[$header] = $value;
-	    }
-	    return $headers;
-	}
+        $headers = [];
+        foreach ($_SERVER as $key => $value) {
+            if (substr($key, 0, 5) != 'HTTP_') {
+                continue;
+            }
+            $header = str_replace(' ', '-', ucwords(str_replace('_', ' ', strtolower(substr($key, 5)))));
+            $headers[$header] = $value;
+        }
 
-	public static function routeException( $ex = 500, $message = '', $trace = '' ) {
-		$app = Config::getConfig( 'app' );
-		if ( empty( $app['app']['env'] ) || $app['app']['env'] != 'dev' ) {
-			$trace = '';
-		}
+        return $headers;
+    }
 
-		$resp = [
-			'status' => $ex,
-			'message' => $message,
-			'trace' => $trace
-		];
+    public static function routeException($ex = 500, $message = '', $trace = '')
+    {
+        $app = Config::getConfig('app');
+        if (empty($app['app']['env']) || $app['app']['env'] != 'dev') {
+            $trace = '';
+        }
 
-		return Response::json( $resp, (int)$ex );
-	}
+        $resp = [
+            'status' => $ex,
+            'message' => $message,
+            'trace' => $trace,
+        ];
+
+        return Response::json($resp, (int)$ex);
+    }
 }

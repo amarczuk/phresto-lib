@@ -1,18 +1,19 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Phresto;
-use Phresto\Model;
-use Phresto\Container;
+
 use Phresto\Exception\RequestException;
 
-class MySQLModel extends Model {
+class MySQLModel extends Model
+{
+    public const CLASSNAME = __CLASS__;
 
-    const CLASSNAME = __CLASS__;
-
-    const DB = 'mysql';
-    const NAME = 'model';
-    const INDEX = 'id';
-    const COLLECTION = 'model';
+    public const DB = 'mysql';
+    public const NAME = 'model';
+    public const INDEX = 'id';
+    public const COLLECTION = 'model';
 
     /*
     * QUERY:
@@ -59,14 +60,15 @@ class MySQLModel extends Model {
     * ]] - (field = 'value' OR field = 'value2')
     *
     */
-    protected static function getConds( $query = null, $prefix = '', $i = 0 ) {
+    protected static function getConds($query = null, $prefix = '', $i = 0)
+    {
         $conds = [];
         $binds = [];
 
-        if ( is_array( $query ) && !empty( $query['where'] ) ) {
-            foreach ( $query['where'] as $key => $val ) {
-                if ( is_array($val) && !is_string($key) ) {
-                    list( $c, $b, $j) = static::getConds([ 'where' => $val ], $prefix, $i);
+        if (is_array($query) && !empty($query['where'])) {
+            foreach ($query['where'] as $key => $val) {
+                if (is_array($val) && !is_string($key)) {
+                    list($c, $b, $j) = static::getConds([ 'where' => $val ], $prefix, $i);
                     if (!empty($c)) {
                         $binds = array_merge($binds, $b);
                         $conds = array_merge($conds, $c);
@@ -75,8 +77,8 @@ class MySQLModel extends Model {
                     continue;
                 }
 
-                if ( is_array($val) ) {
-                    list( $sql, $b, $j) = static::getNestedConds($key, $val, $prefix, $i);
+                if (is_array($val)) {
+                    list($sql, $b, $j) = static::getNestedConds($key, $val, $prefix, $i);
                     if ($sql) {
                         $binds = array_merge($binds, $b);
                         $conds[] = $sql;
@@ -85,7 +87,7 @@ class MySQLModel extends Model {
                     continue;
                 }
 
-                if ( array_key_exists( $key, static::$_fields ) ) {
+                if (array_key_exists($key, static::$_fields)) {
                     $sql = $prefix . $key . ' = :val' . $i;
                     $binds['val' . $i] = $val;
                     $conds[] = $sql;
@@ -94,146 +96,157 @@ class MySQLModel extends Model {
             }
         }
 
-        if ( empty( $conds ) ) {
+        if (empty($conds)) {
             $conds = [ '1' ];
         }
 
         return [ $conds, $binds, $i ];
     }
 
-    protected static function getNestedConds( $preKey, $query, $prefix, $i ) {
+    protected static function getNestedConds($preKey, $query, $prefix, $i)
+    {
         $binds = [];
         if (
-            is_string($query[0]) &&
-            strtolower($query[0]) == 'in' &&
-            array_key_exists( $preKey, static::$_fields )
+            is_string($query[0])
+            && strtolower($query[0]) == 'in'
+            && array_key_exists($preKey, static::$_fields)
         ) {
             $vals = [];
-            foreach($query[1] as $val) {
+            foreach ($query[1] as $val) {
                 $vals[] = ":val{$i}";
                 $binds["val{$i}"] = $val;
                 $i++;
             }
             $sql = "{$prefix}{$preKey} IN (" . implode(', ', $vals) . ')';
+
             return [$sql, $binds, $i];
         }
         if (!empty($preKey) && strtolower($preKey) == 'or') {
-            list( $cons, $binds, $j ) = static::getConds( ['where' => $query ], $prefix, $i );
-            $sql = '(' . implode(' OR ', $cons ) . ')';
+            list($cons, $binds, $j) = static::getConds(['where' => $query ], $prefix, $i);
+            $sql = '(' . implode(' OR ', $cons) . ')';
+
             return [$sql, $binds, $j];
         }
         if (!empty($preKey) && strtolower($preKey) == 'and') {
-            list( $cons, $binds, $j ) = static::getConds( ['where' => $query ], $prefix, $i );
-            $sql = '(' . implode(' AND ', $cons ) . ')';
+            list($cons, $binds, $j) = static::getConds(['where' => $query ], $prefix, $i);
+            $sql = '(' . implode(' AND ', $cons) . ')';
+
             return [$sql, $binds, $j];
         }
-        if (!empty($preKey) && array_key_exists( $preKey, static::$_fields )) {
+        if (!empty($preKey) && array_key_exists($preKey, static::$_fields)) {
             $sql = "{$prefix}{$preKey} {$query[0]} :val{$i}";
             $binds["val{$i}"] = $query[1];
             $i++;
+
             return [$sql, $binds, $i];
         }
 
         return ['', [], $i];
     }
 
-    protected static function extendQuery( $query = null, $prefix = '' ) {
+    protected static function extendQuery($query = null, $prefix = '')
+    {
         $sql = '';
 
-        if ( !empty( $query['order'] ) && !is_array( $query['order'] ) ) {
+        if (!empty($query['order']) && !is_array($query['order'])) {
             $query['order'] = [ $query['order'] ];
         }
 
-        if ( isset( $query['order'] ) && is_array( $query['order'] ) ) {
-            $sql .= ' ORDER BY ' . $prefix . implode( ', ' . $prefix, $query['order'] );
+        if (isset($query['order']) && is_array($query['order'])) {
+            $sql .= ' ORDER BY ' . $prefix . implode(', ' . $prefix, $query['order']);
         }
 
-        if ( !empty( $query['limit'] ) ) {
+        if (!empty($query['limit'])) {
             $sql .= ' LIMIT ' . $query['limit'];
         }
 
-        if ( !empty( $query['offset'] ) ) {
+        if (!empty($query['offset'])) {
             $sql .= ' OFFSET ' . $query['offset'];
         }
 
         return $sql;
     }
 
-    protected static function getQueryFields( $query, $prefix = '' ) {
+    protected static function getQueryFields($query, $prefix = '')
+    {
         $fields = "{$prefix}*";
 
-        if ( !empty( $query['fields'] ) && is_string( $query['fields'] ) ) {
-            $query['fields'] = explode( ',', str_replace( ' ', '', $query['fields'] ) );
+        if (!empty($query['fields']) && is_string($query['fields'])) {
+            $query['fields'] = explode(',', str_replace(' ', '', $query['fields']));
         }
 
-        if ( !empty( $query['fields'] ) && is_array( $query['fields'] ) ) {
-            if ( !in_array( static::INDEX, $query['fields'] ) ) {
-                array_unshift( $query['fields'], static::INDEX );
+        if (!empty($query['fields']) && is_array($query['fields'])) {
+            if (!in_array(static::INDEX, $query['fields'])) {
+                array_unshift($query['fields'], static::INDEX);
             }
 
             $queryfields = [];
 
-            foreach ( $query['fields'] as $value) {
-                $value = trim( $value );
-                if ( array_key_exists( $value, static::$_fields ) ) {
+            foreach ($query['fields'] as $value) {
+                $value = trim($value);
+                if (array_key_exists($value, static::$_fields)) {
                     $queryfields[] = $value;
                 }
             }
 
-            if ( !empty( $queryfields ) ) {
-                $fields = "`{$prefix}" . implode( "`, `{$prefix}", $queryfields ) . '`';
+            if (!empty($queryfields)) {
+                $fields = "`{$prefix}" . implode("`, `{$prefix}", $queryfields) . '`';
             }
         }
 
         return $fields;
     }
 
-    public static function find( $query = null ) {
-        $db = MySQLConnector::getInstance( static::DB );
-        $result = static::findIter( $query );
+    public static function find($query = null)
+    {
+        $db = MySQLConnector::getInstance(static::DB);
+        $result = static::findIter($query);
 
         $modelClass = static::CLASSNAME;
         $res = [];
-        while ( $row = $db->getNext( $result ) ) {
+        while ($row = $db->getNext($result)) {
             $res[] = Container::$modelClass($row, false);
         }
 
         return $res;
     }
 
-    public static function findIter( $query = null ) {
-        $db = MySQLConnector::getInstance( static::DB );
-        list( $conds, $binds ) = static::getConds( $query );
+    public static function findIter($query = null)
+    {
+        $db = MySQLConnector::getInstance(static::DB);
+        list($conds, $binds) = static::getConds($query);
 
-        $fields = static::getQueryFields( $query );
+        $fields = static::getQueryFields($query);
 
-        $sql = "SELECT {$fields} FROM " . static::COLLECTION . " WHERE " . implode( ' AND ', $conds );
-        $sql .= static::extendQuery( $query );
+        $sql = "SELECT {$fields} FROM " . static::COLLECTION . ' WHERE ' . implode(' AND ', $conds);
+        $sql .= static::extendQuery($query);
 
-        $result = $db->query( $sql, $binds );
+        $result = $db->query($sql, $binds);
 
         return $result;
     }
 
-    public static function findOne($query = null) {
+    public static function findOne($query = null)
+    {
         $query['limit'] = 1;
-        $res = static::find( $query );
+        $res = static::find($query);
 
         return !empty($res) && !empty($res[0]) ? $res[0] : null;
     }
 
-    public static function findRelated( Model $model, $query = null ) {
-        if ( !static::isRelated( $model->getName() ) || empty( $model->getIndex() ) ) {
-            throw new RequestException( 'Bad request', 400 );
+    public static function findRelated(Model $model, $query = null)
+    {
+        if (!static::isRelated($model->getName()) || empty($model->getIndex())) {
+            throw new RequestException('Bad request', 400);
         }
 
-        $db = MySQLConnector::getInstance( static::DB );
-        $relation = static::getRelation( $model->getName() );
-        list( $conds, $binds ) = static::getConds( $query, 'm.' );
+        $db = MySQLConnector::getInstance(static::DB);
+        $relation = static::getRelation($model->getName());
+        list($conds, $binds) = static::getConds($query, 'm.');
 
-        $fields = static::getQueryFields( $query, 'm.' );
+        $fields = static::getQueryFields($query, 'm.');
 
-        switch ( $relation['type'] ) {
+        switch ($relation['type']) {
             case '1:1':
             case '1:n':
             case 'n:1':
@@ -242,56 +255,58 @@ class MySQLModel extends Model {
                 $conds[] = 'm.' . $relation['index'] . ' = r.' . $relation['field'];
                 $conds[] = 'r.' . $model->getIndexField() . ' = :mfield';
                 $binds['mfield'] = $model->getIndex();
-                $sql = "SELECT {$fields} FROM " . static::COLLECTION . " m, " . $model->getCollection() . " r
-                 WHERE " . implode( ' AND ', $conds );
-                $sql .= ( $relation['type'] == '1:n') ? " GROUP BY m." . static::INDEX : '';
+                $sql = "SELECT {$fields} FROM " . static::COLLECTION . ' m, ' . $model->getCollection() . ' r
+                 WHERE ' . implode(' AND ', $conds);
+                $sql .= ($relation['type'] == '1:n') ? ' GROUP BY m.' . static::INDEX : '';
                 break;
             case 'n:n':
                 break;
         }
 
-        $sql .= static::extendQuery( $query, 'm.' );
+        $sql .= static::extendQuery($query, 'm.');
 
-        $result = $db->query( $sql, $binds );
+        $result = $db->query($sql, $binds);
 
         $modelClass = static::CLASSNAME;
         $res = [];
-        while ( $row = $db->getNext( $result ) ) {
-            $res[] = Container::$modelClass( $row, false );
+        while ($row = $db->getNext($result)) {
+            $res[] = Container::$modelClass($row, false);
         }
 
         return $res;
     }
 
-    protected function saveRecord() {
-        $db = MySQLConnector::getInstance( static::DB );
+    protected function saveRecord()
+    {
+        $db = MySQLConnector::getInstance(static::DB);
 
-        if ( !$this->_new ) {
+        if (!$this->_new) {
             $fields = [];
-            foreach ( $this->_properties as $key => $value) {
+            foreach ($this->_properties as $key => $value) {
                 $fields[] = '`' . $key . '` = :' . $key;
             }
-            $sql = "UPDATE " . static::COLLECTION . " SET " . implode( ', ', $fields );
-            $sql .= " WHERE " . static::INDEX . " = :" . static::INDEX . " LIMIT 1";
+            $sql = 'UPDATE ' . static::COLLECTION . ' SET ' . implode(', ', $fields);
+            $sql .= ' WHERE ' . static::INDEX . ' = :' . static::INDEX . ' LIMIT 1';
         } else {
-            $sql = "INSERT INTO " . static::COLLECTION . " ( `" . implode( '`, `', $this->filteredFields() ) . "` ) ";
-            $sql .= "VALUES ( :" . implode( ', :', $this->filteredFields() ) . " )";
+            $sql = 'INSERT INTO ' . static::COLLECTION . ' ( `' . implode('`, `', $this->filteredFields()) . '` ) ';
+            $sql .= 'VALUES ( :' . implode(', :', $this->filteredFields()) . ' )';
         }
-        $db->query( $sql, $this->_properties );
+        $db->query($sql, $this->_properties);
 
-        if ( $this->_new ) {
+        if ($this->_new) {
             $this->_new = false;
-            $this->setById( $db->getLastId() );
+            $this->setById($db->getLastId());
         }
 
         return true;
     }
 
-    protected function filteredFields() {
+    protected function filteredFields()
+    {
         $fields = static::getFields();
         $filtered = [];
-        foreach ( $fields as $field ) {
-            if ( array_key_exists( $field, $this->_properties ) ) {
+        foreach ($fields as $field) {
+            if (array_key_exists($field, $this->_properties)) {
                 array_push($filtered, $field);
             }
         }
@@ -299,42 +314,47 @@ class MySQLModel extends Model {
         return $filtered;
     }
 
-    protected function deleteRecord() {
-        $db = MySQLConnector::getInstance( self::DB );
+    protected function deleteRecord()
+    {
+        $db = MySQLConnector::getInstance(self::DB);
 
-        $sql = "delete from " . static::COLLECTION . " where " . static::INDEX . " = :index limit 1";
+        $sql = 'delete from ' . static::COLLECTION . ' where ' . static::INDEX . ' = :index limit 1';
         $bind = [ 'index' => $this->_properties[static::INDEX] ];
-        $db->query( $sql, $bind );
+        $db->query($sql, $bind);
 
         return true;
     }
 
-    public static function count($query = null) {
+    public static function count($query = null)
+    {
         $db = MySQLConnector::getInstance(static::DB);
         list($conds, $binds) = static::getConds($query);
 
         $fields = static::getQueryFields($query);
 
-        $sql = "SELECT COUNT(" . static::INDEX . ") as cnt FROM " . static::COLLECTION . " WHERE " . implode(' AND ', $conds);
+        $sql = 'SELECT COUNT(' . static::INDEX . ') as cnt FROM ' . static::COLLECTION . ' WHERE ' . implode(' AND ', $conds);
         $sql .= static::extendQuery($query);
 
         $result = $db->query($sql, $binds);
 
-        $record = $db->getNext( $result );
+        $record = $db->getNext($result);
+
         return $record['cnt'];
     }
 
-
-    public static function countRelated( $model ) {
-        if ( !static::isRelated( $model->getName() ) || empty( $model->getIndex() ) ) {
-            throw new RequestException( 'Bad request', 400 );
+    public static function countRelated($model)
+    {
+        if (!static::isRelated($model->getName()) || empty($model->getIndex())) {
+            throw new RequestException('Bad request', 400);
         }
 
-        $db = MySQLConnector::getInstance( static::DB );
-        $relation = static::getRelation( $model->getName() );
+        $db = MySQLConnector::getInstance(static::DB);
+        $relation = static::getRelation($model->getName());
 
         $binds = [];
-        switch ( $relation['type'] ) {
+        $conds = [];
+        $sql = '';
+        switch ($relation['type']) {
             case '1:1':
             case '1:n':
             case 'n:1':
@@ -343,67 +363,74 @@ class MySQLModel extends Model {
                 $conds[] = 'm.' . $relation['index'] . ' = r.' . $relation['field'];
                 $conds[] = 'r.' . $model->getIndexField() . ' = :mfield';
                 $binds['mfield'] = $model->getIndex();
-                $sql = "SELECT COUNT(m." . static::INDEX . ") as cnt FROM " . static::COLLECTION . " m, " . $model->getCollection() . " r
-                 WHERE " . implode( ' AND ', $conds );
-                $sql .= ( $relation['type'] == '1:n') ? " GROUP BY m." . static::INDEX : '';
+                $sql = 'SELECT COUNT(m.' . static::INDEX . ') as cnt FROM ' . static::COLLECTION . ' m, ' . $model->getCollection() . ' r
+                 WHERE ' . implode(' AND ', $conds);
+                $sql .= ($relation['type'] == '1:n') ? ' GROUP BY m.' . static::INDEX : '';
                 break;
             case 'n:n':
                 break;
         }
 
-        $result = $db->query( $sql, $binds );
+        $result = $db->query($sql, $binds);
 
-        $record = $db->getNext( $result );
+        $record = $db->getNext($result);
+
         return $record['cnt'];
     }
 
-    public static function getCreationCode() {
-        $db = MySQLConnector::getInstance( static::DB );
+    public static function getCreationCode()
+    {
+        $db = MySQLConnector::getInstance(static::DB);
         $new = true;
         $newCols = [];
         $dropCols = [];
         $modelFields = static::getFields();
         $modelIndexes = [];
+
         try {
-            $fields = $db->getFields( static::COLLECTION );
-            $modelIndexes = $db->getIndexes( static::COLLECTION );
+            $fields = $db->getFields(static::COLLECTION);
+            $modelIndexes = $db->getIndexes(static::COLLECTION);
             $new = false;
-            foreach($fields as $name => $type) {
+            foreach ($fields as $name => $type) {
                 if (!in_array($name, $modelFields)) {
                     $dropCols[] = $name;
                 }
             }
-            foreach($modelFields as $field) {
+            foreach ($modelFields as $field) {
                 if (!array_key_exists($field, $fields)) {
                     $newCols[] = $field;
                 }
             }
-        } catch(\Exception $e) {
+        } catch (\Exception $e) {
             // table does not exist
         }
 
         $sql = $new
-            ? "CREATE TABLE IF NOT EXISTS `" . static::COLLECTION . "` (\n"
-            : "ALTER TABLE `" . static::COLLECTION . "` \n";
+            ? 'CREATE TABLE IF NOT EXISTS `' . static::COLLECTION . "` (\n"
+            : 'ALTER TABLE `' . static::COLLECTION . "` \n";
 
         foreach (static::$_fields as $field => $type) {
             $sqlType = static::getSqlType($type);
             $add = in_array($field, $newCols);
             $drop = in_array($field, $dropCols);
             if (!$new && $add) {
-                $sql .= "  ADD COLUMN ";
-            } else if (!$new && $drop) {
-                $sql .= "  DROP COLUMN ";
-            } else if (!$new) {
-                $sql .= "  MODIFY COLUMN ";
+                $sql .= '  ADD COLUMN ';
+            } elseif (!$new && $drop) {
+                $sql .= '  DROP COLUMN ';
+            } elseif (!$new) {
+                $sql .= '  MODIFY COLUMN ';
             }
 
             $sql .= "  `{$field}`";
             if (!$drop) {
                 $sql .= " {$sqlType}";
                 if ($field == static::INDEX) {
-                    if ($sqlType == 'INT') $sql .= ' AUTO_INCREMENT';
-                    if ($new) $sql .= ' PRIMARY KEY';
+                    if ($sqlType == 'INT') {
+                        $sql .= ' AUTO_INCREMENT';
+                    }
+                    if ($new) {
+                        $sql .= ' PRIMARY KEY';
+                    }
                 }
             }
             $sql .= ",\n";
@@ -415,36 +442,42 @@ class MySQLModel extends Model {
             $idx_fields = implode(',', $value['fields']);
             $is_unique = isset($value['unique']) ? $value['unique'] : false;
             $idx_type = isset($value['type']) ? $value['type'] : '';
-            if (array_key_exists($index, $modelIndexes) &&
-                implode(',', $modelIndexes[$index]['fields']) == $idx_fields &&
-                $modelIndexes[$index]['unique'] == $is_unique &&
-                $modelIndexes[$index]['type'] == $idx_type) {
+            if (array_key_exists($index, $modelIndexes)
+                && implode(',', $modelIndexes[$index]['fields']) == $idx_fields
+                && $modelIndexes[$index]['unique'] == $is_unique
+                && $modelIndexes[$index]['type'] == $idx_type) {
                 continue;
             }
 
             if (array_key_exists($index, $modelIndexes)) {
                 $sql .= "DROP INDEX `{$index}` ON `" . static::COLLECTION . "`;\n";
             }
-            $sql .= "CREATE " . ($is_unique ? 'UNIQUE ' : '') . $idx_type . " INDEX `{$index}` ON `" . static::COLLECTION . "` (`" . implode('`, `', $value['fields']) . "`);\n";
+            $sql .= 'CREATE ' . ($is_unique ? 'UNIQUE ' : '') . $idx_type . " INDEX `{$index}` ON `" . static::COLLECTION . '` (`' . implode('`, `', $value['fields']) . "`);\n";
         }
+
         return $sql;
     }
 
-    public static function getRelationCode() {
-        $db = MySQLConnector::getInstance( static::DB );
+    public static function getRelationCode()
+    {
+        $db = MySQLConnector::getInstance(static::DB);
 
         $sqls = [];
         $fkNames = [];
-        $modelIndexes = $db->getIndexes( static::COLLECTION );
+        $modelIndexes = $db->getIndexes(static::COLLECTION);
 
         foreach (static::$_relations as $model => $relation) {
             $sql = '';
 
             $fkTypes = ['n:1', '1<1', 'n:n'];
-            if (!in_array($relation['type'], $fkTypes) || !empty($relation['skipfk'])) continue;
+            if (!in_array($relation['type'], $fkTypes) || !empty($relation['skipfk'])) {
+                continue;
+            }
 
             $fk = [static::NAME . '__' . $relation['index'], $relation['model'] . '__' . $relation['field']];
-            if ($relation['type'] != 'n:n') sort($fk);
+            if ($relation['type'] != 'n:n') {
+                sort($fk);
+            }
             $fkName = implode('__', $fk);
 
             if (array_key_exists($fkName, $modelIndexes)) {
@@ -461,13 +494,15 @@ class MySQLModel extends Model {
             if (!empty($relation['dbactions'])) {
                 $sql .= "      {$relation['dbactions']}";
             } else {
-                $sql .= "      ON UPDATE CASCADE ON DELETE CASCADE";
+                $sql .= '      ON UPDATE CASCADE ON DELETE CASCADE';
             }
 
             $sqls[] = $sql;
             $fkNames[] = "CALL PROC_DROP_FOREIGN_KEY('" . static::COLLECTION . "', '{$fkName}');";
         }
-        if (empty($sqls)) return '';
+        if (empty($sqls)) {
+            return '';
+        }
 
         $sql = implode(",\n", $sqls) . ";\n";
 
@@ -476,7 +511,7 @@ class MySQLModel extends Model {
         }
 
         if (!empty(trim($sql))) {
-            return "ALTER TABLE `" . static::COLLECTION . "` \n" . $sql;
+            return 'ALTER TABLE `' . static::COLLECTION . "` \n" . $sql;
         }
 
         if (count($fkNames) > 0) {
@@ -486,7 +521,8 @@ class MySQLModel extends Model {
         return '';
     }
 
-    private static function getSqlType($type) {
+    private static function getSqlType($type)
+    {
         if (is_array($type)) {
             return $type['db'];
         }

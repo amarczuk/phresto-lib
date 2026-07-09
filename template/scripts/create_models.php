@@ -1,10 +1,13 @@
 <?php
+
+declare(strict_types=1);
+
 namespace Phresto;
 
 require_once(__DIR__ . '/bootstrap.php');
 
 Utils::updateModules();
-$modules = Config::getConfig( 'modules' );
+$modules = Config::getConfig('modules');
 
 $sql = "SET foreign_key_checks = 0;\n\n";
 $sql .= "DROP PROCEDURE IF EXISTS PROC_DROP_FOREIGN_KEY;\n\n";
@@ -36,5 +39,5 @@ $sql .= "{$relationSql}\n\nSET foreign_key_checks = 1;\n";
 
 echo $sql;
 
-$db = MySQLConnector::getInstance( MySQLModel::DB );
+$db = MySQLConnector::getInstance(MySQLModel::DB);
 echo $db->exec($sql, []);

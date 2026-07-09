@@ -58,3 +58,18 @@ template/
 - Added `GET /openapi` (JSON) and `GET /openapi?format=yaml` for YAML output.
 - All non-discovery responses are JSON; `Response::json()` is the canonical way to return data.
 - Removed the `lusitanian/oauth` dependency.
+- Requires **PHP 8.0 or newer**. Removed PHP 7.x compatibility code (e.g. `ReflectionParameter::export()`) and fixed PHP 8 deprecations.
+- Added `declare(strict_types=1)` to every PHP file and adopted **PSR-12** code style via [PHP-CS-Fixer](https://github.com/PHP-CS-Fixer/PHP-CS-Fixer).
+
+## PHP 8 and code style
+
+Phresto now requires PHP 8.0+. All source and template files use `declare(strict_types=1)` and follow PSR-12.
+
+PHP-CS-Fixer is provided as a dev dependency. Use the Composer scripts to check or fix style:
+
+```bash
+composer cs-check   # dry-run with diff
+composer cs-fix     # apply fixes
+```
+
+The configuration is in `.php-cs-fixer.php`. It extends PSR-12 with short array syntax, ordered imports, trailing commas in multi-line lists, and the `strict_types` declaration.

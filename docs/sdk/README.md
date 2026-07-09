@@ -1,6 +1,6 @@
 # Phresto SDK Documentation
 
-> **v2 baseline** — Phresto is now a JSON-only REST API framework. The Explorer/Admin UIs, HTML templating, and language files have been removed. Discovery is provided as a cached OpenAPI 3.0 spec at `/openapi`.
+> **v2 baseline** — Phresto is now a JSON-only REST API framework. The Explorer/Admin UIs, HTML templating, and language files have been removed. Discovery is provided as a cached OpenAPI 3.0 spec at `/openapi`. Phresto requires PHP 8.0 or newer.
 
 This folder contains documentation for developers building applications with Phresto. For internal implementation details, see the [developer documentation](../dev/README.md).
 

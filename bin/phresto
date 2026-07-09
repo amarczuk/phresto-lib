@@ -35,7 +35,7 @@ if ($run == 0) {
 function install($key)
 {
     $pos = array_search($key, $argv) + 1;
-    if (empty($argv[$pos]) || mb_strpos('/', $argv[$pos]) === false) {
+    if (empty($argv[$pos]) || mb_strpos($argv[$pos], '/') === false) {
         echo "Wrong module name.\n";
         return;
     }
@@ -50,7 +50,7 @@ function install($key)
         echo "Module was not installed correctly.\n";
         return;
     }
-    copyDir(getPath([PHRESTO_ROOT, 'vendor', $module, 'modules']), getPath(PHRESTO_ROOT, 'modules'));
+    copyDir(getPath([PHRESTO_ROOT, 'vendor', $module, 'modules']), getPath([PHRESTO_ROOT, 'modules']));
 
     echo "Module {$module} has been installed.\n";
 }
@@ -58,7 +58,7 @@ function install($key)
 function update($key)
 {
     $pos = array_search($key, $argv) + 1;
-    if (empty($argv[$pos]) || mb_strpos('/', $argv[$pos]) === false) {
+    if (empty($argv[$pos]) || mb_strpos($argv[$pos], '/') === false) {
         echo "Wrong module name.\n";
         return;
     }
@@ -75,7 +75,7 @@ function update($key)
     }
     copyDir(
         getPath([PHRESTO_ROOT, 'vendor', $module, 'modules']),
-        getPath(PHRESTO_ROOT, 'modules'),
+        getPath([PHRESTO_ROOT, 'modules']),
         ['.ini' . DIRECTORY_SEPARATOR]
     );
 

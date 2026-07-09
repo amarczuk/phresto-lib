@@ -1,79 +1,95 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Phresto;
-use Phresto\Interf\DBConnectorInterface;
+
 use Phresto\Exception\DBException;
+use Phresto\Interf\DBConnectorInterface;
 
 class DBConnector implements DBConnectorInterface
 {
-
-    const CLASSNAME = __CLASS__;
+    public const CLASSNAME = __CLASS__;
 
     protected static $dbs = [];
+
     protected $connection;
 
-    public static function getInstance( $name, $options = null ) {
-        if ( !empty( static::$dbs[$name] ) ) {
+    public static function getInstance($name, $options = null)
+    {
+        if (!empty(static::$dbs[$name])) {
             return static::$dbs[$name];
         }
 
-        if ( !empty( $options ) ) {
+        if (!empty($options)) {
             $class = static::CLASSNAME;
-            static::$dbs[$name] = new $class( $name, $options );
+            static::$dbs[$name] = new $class($name, $options);
+
             return static::$dbs[$name];
         }
 
-        $options = Config::getConfig( 'db' );
-        if ( !empty( $options[$name] ) ) {
+        $options = Config::getConfig('db');
+        if (!empty($options[$name])) {
             $class = static::CLASSNAME;
-            static::$dbs[$name] = new $class( $name, $options[$name] );
+            static::$dbs[$name] = new $class($name, $options[$name]);
+
             return static::$dbs[$name];
         }
 
-        throw new DBException( "Requested connection not found" );
+        throw new DBException('Requested connection not found');
     }
 
-    public function __construct( $name, $options ) {
-        if ( !$this->connection = $this->connect( $options ) ) {
-            throw new DBException( "Cannot connect to database" );
+    public function __construct($name, $options)
+    {
+        if (!$this->connection = $this->connect($options)) {
+            throw new DBException('Cannot connect to database');
         }
 
         static::$dbs[$name] = $this;
     }
 
-    public function __destruct() {
+    public function __destruct()
+    {
         $this->disconnect();
     }
 
-
-    public function connect( $options ) {
+    public function connect($options)
+    {
     }
 
-    public function disconnect() {
+    public function disconnect()
+    {
     }
 
-    public function close() {
+    public function close()
+    {
     }
 
-    public function escape( $var ) {
+    public function escape($var)
+    {
     }
 
-    public function bind( $query, $variables ) {
+    public function bind($query, $variables)
+    {
     }
 
-    public function query( $query, $bindings = [] ) {
+    public function query($query, $bindings = [])
+    {
     }
 
-    public function count( $resource ) {
+    public function count($resource)
+    {
     }
 
-    public function getNext( $resource ) {
+    public function getNext($resource)
+    {
     }
 
-    public function getLastId() {
+    public function getLastId()
+    {
     }
 
-    public function getLastError() {
+    public function getLastError()
+    {
     }
-
 }

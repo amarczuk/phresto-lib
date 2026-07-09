@@ -1,24 +1,27 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Phresto;
-use Phresto\ModelController;
 
-class CustomModelController extends ModelController {
+class CustomModelController extends ModelController
+{
+    public const CLASSNAME = __CLASS__;
+    public const MODELCLASS = 'Phresto\\Module\\Model\\Name';
 
-	const CLASSNAME = __CLASS__;
-	const MODELCLASS = 'Phresto\\Module\\Model\\Name';
+    public function __construct($reqType, $route, $body, $bodyRaw, $query, $headers)
+    {
+        $this->modelName = static::MODELCLASS;
+        parent::__construct(static::MODELCLASS, $reqType, $route, $body, $bodyRaw, $query, $headers);
+    }
 
-	public function __construct( $reqType, $route, $body, $bodyRaw, $query, $headers ) {
-		$this->modelName = static::MODELCLASS;
-		parent::__construct( static::MODELCLASS, $reqType, $route, $body, $bodyRaw, $query, $headers );
-	}
+    protected static function getParameters($method, $className)
+    {
+        return parent::getParameters($method, static::MODELCLASS);
+    }
 
-	protected static function getParameters( $method, $className ) {
-		return parent::getParameters( $method, static::MODELCLASS );
-	}
-
-	public static function discover( $all = false, $className = null, $getRelated = true ) {
-		return parent::discover( $all, static::MODELCLASS, $getRelated );
-	}
-
+    public static function discover($all = false, $className = null, $getRelated = true)
+    {
+        return parent::discover($all, static::MODELCLASS, $getRelated);
+    }
 }

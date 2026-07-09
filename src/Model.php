@@ -1,21 +1,28 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Phresto;
+
 use Phresto\Interf\ModelInterface;
 
-class Model implements ModelInterface, \JsonSerializable {
+class Model implements ModelInterface, \JsonSerializable
+{
+    public const CLASSNAME = __CLASS__;
 
-    const CLASSNAME = __CLASS__;
-
-    const DB = 'maindb';
-	const NAME = 'model';
-	const INDEX = 'id';
-    const COLLECTION = 'model';
+    public const DB = 'maindb';
+    public const NAME = 'model';
+    public const INDEX = 'id';
+    public const COLLECTION = 'model';
 
     protected $_properties = [];
+
     protected $_calculated_properties = [];
+
     protected $_initial = [];
+
     protected $_debug = '';
+
     protected $_new = true;
 
     /**
@@ -27,6 +34,7 @@ class Model implements ModelInterface, \JsonSerializable {
     * ]
     */
     protected static $_fields = [];
+
     /**
      * array of the model field names and types that are not in database
      * [
@@ -40,7 +48,7 @@ class Model implements ModelInterface, \JsonSerializable {
     * if value should be determined during runtime leave value empty and
     * add protected function `default_field_name()` returning default value
     */
-	protected static $_defaults = [];
+    protected static $_defaults = [];
 
     /**
     * array describing model relations:
@@ -67,100 +75,115 @@ class Model implements ModelInterface, \JsonSerializable {
     *   'type' => '' // index type (optional) - FULLTEXT, SPATIAL
     * ]
     */
-	protected static $_indexes = [];
+    protected static $_indexes = [];
 
-    public function __construct( $option = null, $checkIfNew = true ) {
+    public function __construct($option = null, $checkIfNew = true)
+    {
         $this->_new = true;
 
-        if ( empty( $option ) ) {
+        if (empty($option)) {
             $this->getEmpty();
-        } else if ( is_array( $option ) && isset( $option['where'] ) ) {
+        } elseif (is_array($option) && isset($option['where'])) {
             $option['limit'] = 1;
-            $result = static::find( $option );
-            if ( !empty( $result ) && !empty( $result[0] ) ) {
-                $this->setObject( $result[0], $checkIfNew );
+            $result = static::find($option);
+            if (!empty($result) && !empty($result[0])) {
+                $this->setObject($result[0], $checkIfNew);
             } else {
                 $this->getEmpty();
             }
-        } else if ( is_array( $option ) ) {
-            $this->set( $option, $checkIfNew );
-        } else if ( is_object( $option ) ) {
-            $this->setObject( $option, $checkIfNew );
-        } else if ( is_string( $option ) && !is_numeric( $option ) && $json = json_decode( $option, true ) ) {
-            $this->set( $json, $checkIfNew );
+        } elseif (is_array($option)) {
+            $this->set($option, $checkIfNew);
+        } elseif (is_object($option)) {
+            $this->setObject($option, $checkIfNew);
+        } elseif (is_string($option) && !is_numeric($option) && $json = json_decode($option, true)) {
+            $this->set($json, $checkIfNew);
         } else {
-            $this->setById( $option );
+            $this->setById($option);
         }
 
         $this->_initial = $this->_properties;
     }
 
-    public static function getIndexField() {
+    public static function getIndexField()
+    {
         return static::INDEX;
     }
 
-    public static function getName() {
+    public static function getName()
+    {
         return static::NAME;
     }
 
-    public static function getCollection() {
+    public static function getCollection()
+    {
         return static::COLLECTION;
     }
 
-    public static function isRelated( $modelName ) {
-        return array_key_exists( $modelName, static::$_relations );
+    public static function isRelated($modelName)
+    {
+        return array_key_exists($modelName, static::$_relations);
     }
 
-    public static function getRelation( $modelName ) {
+    public static function getRelation($modelName)
+    {
         return static::$_relations[$modelName];
     }
 
-    public function setIndex( $id ) {
+    public function setIndex($id)
+    {
         $this->_properties[static::INDEX] = $id;
         $this->_new = false;
     }
 
-    public static function getFields() {
-        return array_keys( static::$_fields );
+    public static function getFields()
+    {
+        return array_keys(static::$_fields);
     }
 
-    public static function getFieldsAndTypes() {
+    public static function getFieldsAndTypes()
+    {
         return static::$_fields;
     }
 
-    public static function getCreationCode() {
+    public static function getCreationCode()
+    {
         return '';
     }
 
-    public static function getRelationCode() {
+    public static function getRelationCode()
+    {
         return '';
     }
 
-    protected function getEmpty() {
-    	$this->_properties = [];
-    	foreach( static::$_fields as $field => $type ) {
-    		$this->_properties[$field] = null;
-    	}
-    	$this->_new = true;
+    protected function getEmpty()
+    {
+        $this->_properties = [];
+        foreach (static::$_fields as $field => $type) {
+            $this->_properties[$field] = null;
+        }
+        $this->_new = true;
     }
 
-    public function setById( $id ) {
-        $obj = static::find( [ 'where' => [ static::INDEX => $id ], 'limit' => 1 ] );
-        if ( isset( $obj[0] ) ) {
-            $this->setObject( $obj[0], false );
+    public function setById($id)
+    {
+        $obj = static::find([ 'where' => [ static::INDEX => $id ], 'limit' => 1 ]);
+        if (isset($obj[0])) {
+            $this->setObject($obj[0], false);
         }
     }
 
-    public function setRelatedById( $model, $id ) {
-        $related = static::findRelated( $model, [ 'where' => [ static::INDEX => $id ], 'limit' => 1 ] );
-        if ( isset( $related[0] ) ) {
-            $this->setObject( $related[0], false );
+    public function setRelatedById($model, $id)
+    {
+        $related = static::findRelated($model, [ 'where' => [ static::INDEX => $id ], 'limit' => 1 ]);
+        if (isset($related[0])) {
+            $this->setObject($related[0], false);
         }
     }
 
-    public function update( $modelArray ) {
-        foreach( static::$_fields as $field => $type ) {
-            if ( isset( $modelArray[$field] ) ) {
+    public function update($modelArray)
+    {
+        foreach (static::$_fields as $field => $type) {
+            if (isset($modelArray[$field])) {
                 $this->$field = $modelArray[$field];
             }
         }
@@ -171,37 +194,41 @@ class Model implements ModelInterface, \JsonSerializable {
         }
     }
 
-    protected function set( $modelArray, $checkIfNew = true ) {
-    	$this->_properties = [];
-        $this->update( $modelArray, $checkIfNew );
+    protected function set($modelArray, $checkIfNew = true)
+    {
+        $this->_properties = [];
+        $this->update($modelArray, $checkIfNew);
 
         $this->setNew($checkIfNew);
     }
 
-    protected function setNew( $checkIfNew = true ) {
-        if ( !empty( $this->_properties[static::INDEX] ) && !$checkIfNew ) {
+    protected function setNew($checkIfNew = true)
+    {
+        if (!empty($this->_properties[static::INDEX]) && !$checkIfNew) {
             $this->_new = false;
+
             return;
         }
 
-        if ( !empty( $this->_properties[static::INDEX] ) ) {
-            $obj = static::find( [ 'where' => [ static::INDEX => $this->getIndex() ], 'limit' => 1 ] );
-            if ( isset( $obj[0] ) ) {
+        if (!empty($this->_properties[static::INDEX])) {
+            $obj = static::find([ 'where' => [ static::INDEX => $this->getIndex() ], 'limit' => 1 ]);
+            if (isset($obj[0])) {
                 $this->_new = false;
             }
         }
     }
 
-    protected function setObject( $model, $checkIfNew = true ) {
+    protected function setObject($model, $checkIfNew = true)
+    {
         $this->_properties = [];
         $this->_calculated_properties = [];
-        foreach( static::$_fields as $field => $type ) {
-            if ( isset( $model->$field ) ) {
+        foreach (static::$_fields as $field => $type) {
+            if (isset($model->$field)) {
                 $this->$field = $model->$field;
             }
         }
-        foreach( static::$_calculated_fields as $field => $type ) {
-            if ( isset( $model->$field ) ) {
+        foreach (static::$_calculated_fields as $field => $type) {
+            if (isset($model->$field)) {
                 $this->$field = $model->$field;
             }
         }
@@ -209,47 +236,60 @@ class Model implements ModelInterface, \JsonSerializable {
         $this->setNew($checkIfNew);
     }
 
-    public static function find( $query ) {
+    public static function find($query)
+    {
         $class = static::CLASSNAME;
+
         return [ new $class() ];
     }
 
     public static function findOne($query)
     {
         $class = static::CLASSNAME;
+
         return new $class();
     }
 
-    public static function count($query) {
+    public static function count($query)
+    {
         return 0;
     }
 
-    public static function findRelated( Model $model, $query = null ) {
-    	$class = static::CLASSNAME;
+    public static function findRelated(Model $model, $query = null)
+    {
+        $class = static::CLASSNAME;
+
         return [ new $class() ];
     }
 
-    protected function saveFilter() {
+    protected function saveFilter()
+    {
         return true;
     }
 
-    protected function saveValidate() {
+    protected function saveValidate()
+    {
         return true;
     }
 
-    protected function saveRecord() {
+    protected function saveRecord()
+    {
         return true;
     }
 
-    protected function saveAfter() {
+    protected function saveAfter()
+    {
         return true;
     }
 
-    protected function saveSetDefaults() {
-        if ( !$this->_new ) return true;
-        foreach ( static::$_defaults as $key => $value ) {
-            if ( empty( $this->_properties[$key] ) ) {
-                if ( empty( $value ) && method_exists( $this, 'default_' . $key ) ) {
+    protected function saveSetDefaults()
+    {
+        if (!$this->_new) {
+            return true;
+        }
+        foreach (static::$_defaults as $key => $value) {
+            if (empty($this->_properties[$key])) {
+                if (empty($value) && method_exists($this, 'default_' . $key)) {
                     $this->$key = $this->{'default_' . $key}();
                 } else {
                     $this->$key = $value;
@@ -258,29 +298,34 @@ class Model implements ModelInterface, \JsonSerializable {
         }
     }
 
-    public function save() {
+    public function save()
+    {
         $this->saveSetDefaults();
-    	$this->saveFilter();
+        $this->saveFilter();
         $this->saveValidate();
         $this->saveRecord();
         $this->_initial = $this->_properties;
         $this->saveAfter();
     }
 
-    protected function deleteValidate() {
+    protected function deleteValidate()
+    {
         return true;
     }
 
-    protected function deleteRecord() {
+    protected function deleteRecord()
+    {
         return true;
     }
 
-    protected function deleteAfter() {
+    protected function deleteAfter()
+    {
         return true;
     }
 
-    public function delete() {
-    	$this->deleteValidate();
+    public function delete()
+    {
+        $this->deleteValidate();
         $this->deleteRecord();
         $this->_properties[static::INDEX] = null;
         $this->_initial = $this->_properties;
@@ -298,63 +343,71 @@ class Model implements ModelInterface, \JsonSerializable {
         return self::deleteRecords($query);
     }
 
-    public function getIndex() {
-        if ( isset( $this->_properties[static::INDEX] ) ) {
+    public function getIndex()
+    {
+        if (isset($this->_properties[static::INDEX])) {
             return $this->_properties[static::INDEX];
         }
 
         return null;
     }
 
-    public function __set( $name, $value ) {
-        if ( $name == '_debug_' ) {
+    public function __set($name, $value)
+    {
+        if ($name == '_debug_') {
             return $this->_debug = $value;
         }
 
-    	if ( array_key_exists( $name, static::$_fields ) ) {
-    		$this->_properties[$name] = $this->getTyped( $name, $value );
-    	}
+        if (array_key_exists($name, static::$_fields)) {
+            $this->_properties[$name] = $this->getTyped($name, $value);
+        }
 
         if (array_key_exists($name, static::$_calculated_fields)) {
             $this->_calculated_properties[$name] = $this->getTyped($name, $value);
         }
     }
 
-    public function __get( $name ) {
-        if ( $name == '_debug_' ) {
+    public function __get($name)
+    {
+        if ($name == '_debug_') {
             return $this->_debug;
         }
 
-        if ( array_key_exists( $name, static::$_fields ) ) {
-    	   return $this->getTyped( $name );
+        if (array_key_exists($name, static::$_fields)) {
+            return $this->getTyped($name);
         }
 
         if (array_key_exists($name, static::$_calculated_fields)) {
             return $this->getTyped($name);
         }
 
-        if ( method_exists( $this, "{$name}_value" ) ) {
+        if (method_exists($this, "{$name}_value")) {
             $method = "{$name}_value";
+
             return $this->$method();
         }
     }
 
-    public function __isset( $name ) {
-        $debug = ( $name == '_debug_' && !empty( $this->_debug ) );
-    	return ( $debug ||
-            ( array_key_exists( $name, static::$_fields ) && isset( $this->_properties[$name] ) ) ||
-            ( array_key_exists( $name, static::$_calculated_fields ) && isset( $this->_calculated_properties[$name] ) )
+    public function __isset($name)
+    {
+        $debug = ($name == '_debug_' && !empty($this->_debug));
+
+        return ($debug
+            || (array_key_exists($name, static::$_fields) && isset($this->_properties[$name]))
+            || (array_key_exists($name, static::$_calculated_fields) && isset($this->_calculated_properties[$name]))
         );
 
     }
 
-    protected function filterJson( $fields ) {
+    protected function filterJson($fields)
+    {
         return $fields;
     }
 
-    protected function getUniType( $typeDef ) {
+    protected function getUniType($typeDef)
+    {
         $type = is_array($typeDef) ? $typeDef['type'] : $typeDef;
-        switch ( $type ) {
+        switch ($type) {
             case 'bool':
                 return 'boolean';
             case 'int':
@@ -366,49 +419,53 @@ class Model implements ModelInterface, \JsonSerializable {
         }
     }
 
-    protected function getTyped( $name, $value = null ) {
-        $field = array_key_exists( $name, static::$_fields ) ? static::$_fields[$name] : false;
+    protected function getTyped($name, $value = null)
+    {
+        $field = array_key_exists($name, static::$_fields) ? static::$_fields[$name] : false;
         $properties = &$this->_properties;
-        if ( !$field ) {
-            $field = array_key_exists( $name, static::$_calculated_fields ) ? static::$_calculated_fields[$name] : false;
+        if (!$field) {
+            $field = array_key_exists($name, static::$_calculated_fields) ? static::$_calculated_fields[$name] : false;
             $properties = &$this->_calculated_properties;
         }
 
-        if ( $field ) {
-            if ( $value === null && isset( $properties[$name] ) ) {
+        if ($field) {
+            if ($value === null && isset($properties[$name])) {
                 $value = $properties[$name];
             }
 
-            $type = $this->getUniType( $field );
+            $type = $this->getUniType($field);
 
-            if ( class_exists( $type ) ) {
-                if ( !is_a( $value, $type ) ) $value = new $type( $value );
-            } else if ( class_exists( '\\' . $type ) ) {
-                if ( !is_a( $value, '\\' . $type ) ) {
-                    $type = '\\' . $type;
-                    $value = new $type( $value );
+            if (class_exists($type)) {
+                if (!is_a($value, $type)) {
+                    $value = new $type($value);
                 }
-            } else if ( $type == 'boolean' && $value === 'false' ) {
+            } elseif (class_exists('\\' . $type)) {
+                if (!is_a($value, '\\' . $type)) {
+                    $type = '\\' . $type;
+                    $value = new $type($value);
+                }
+            } elseif ($type == 'boolean' && $value === 'false') {
                 $value = false;
-            } else if ( $this->getUniType( gettype( $value ) ) != $type ) {
-                settype( $value, $type );
+            } elseif ($this->getUniType(gettype($value)) != $type) {
+                settype($value, $type);
             }
         }
 
         return $value;
     }
 
-    public function jsonSerialize() {
-        $fields = $this->filterJson( array_merge($this->_properties, $this->_calculated_properties) );
-        foreach ( $fields as $key => $value ) {
-            if ( $value instanceof \DateTime ) {
-                $fields[$key] = $value->format( \DateTime::ISO8601 );
+    public function jsonSerialize()
+    {
+        $fields = $this->filterJson(array_merge($this->_properties, $this->_calculated_properties));
+        foreach ($fields as $key => $value) {
+            if ($value instanceof \DateTime) {
+                $fields[$key] = $value->format(\DateTimeInterface::ATOM);
             }
         }
-        if ( !empty( $this->_debug ) ) {
+        if (!empty($this->_debug)) {
             $fields['_debug_'] = $this->_debug;
         }
+
         return $fields;
     }
-
 }

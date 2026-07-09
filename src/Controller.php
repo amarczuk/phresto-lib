@@ -1,13 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Phresto;
 
-use Phresto\Response;
 use Phresto\Modules\Model\user;
 
-class Controller {
-
-	const CLASSNAME = __CLASS__;
+class Controller
+{
+    public const CLASSNAME = __CLASS__;
 
     /**
      * array describing how to map route parameters (aka path) to method parameters
@@ -16,256 +17,272 @@ class Controller {
      *
      * ['all' => ...] will be used for all methods
      */
-	protected $routeMapping = [];
-	protected $queryDescription = [];
+    protected $routeMapping = [];
 
-	protected $headers = [];
-	protected $body = [];
-	protected $bodyRaw = '';
-	protected $query = [];
-	protected $route = [];
-	protected $reqType = 'get';
-	protected $currentUser = null;
+    protected $queryDescription = [];
 
-	protected static $type = 'controller';
+    protected $headers = [];
 
-	public function __construct( $reqType, $route, $body, $bodyRaw, $query, $headers ) {
-		$this->reqType = $reqType;
-		$this->route = $route;
-		$this->headers = $headers;
-		$this->body = $body;
-		$this->query = $query;
-		$this->bodyRaw = $bodyRaw;
+    protected $body = [];
 
-		$this->currentUser = user::getCurrent( $this->headers );
-	}
+    protected $bodyRaw = '';
 
-	protected function getRouteMapping( $reqType ) {
-		if ( isset( $this->routeMapping[$reqType] ) && is_array( $this->routeMapping[$reqType] ) ) {
-			return $this->routeMapping[$reqType];
-		}
+    protected $query = [];
 
-		if ( isset( $this->routeMapping['all'] ) && is_array( $this->routeMapping['all'] ) ) {
-			return $this->routeMapping['all'];
-		}
+    protected $route = [];
 
-		return [];
-	}
+    protected $reqType = 'get';
 
-	protected function getMethod() {
-		$reflection = new \ReflectionClass( static::CLASSNAME );
+    protected $currentUser = null;
 
-		if ( !empty($this->route[0]) && $reflection->hasMethod( $this->route[0] . '_' . $this->reqType ) ) {
-			$method = $reflection->getMethod( $this->route[0] . '_' . $this->reqType );
-			array_shift( $this->route );
-		} else if ( $reflection->hasMethod( $this->reqType ) ) {
-			$method = $reflection->getMethod( $this->reqType );
-		} else {
-			throw new Exception\RequestException( 'Not found', 404 );
-		}
+    protected static $type = 'controller';
 
-		$params = $method->getParameters();
-		$args = [];
-		$routeMapping = $this->getRouteMapping( $method->name );
-		foreach ( $params as $param ) {
-			if ( !empty( $routeMapping ) && isset( $routeMapping[$param->name] ) && isset( $this->route[$routeMapping[$param->name]] ) && $this->route[$routeMapping[$param->name]] != '') {
-				$args[] = $this->getParamValue( $param, $this->route[$routeMapping[$param->name]] );
-			} else if ( isset( $this->body[$param->name] ) ) {
-				$args[] = $this->getParamValue( $param, $this->body[$param->name] );
-			} else if ( isset( $this->query[$param->name] ) ) {
-				$args[] = $this->getParamValue( $param, $this->query[$param->name] );
-			} else  if ( $param->isDefaultValueAvailable() ) {
-				$args[] = $param->getDefaultValue();
-			} else {
-				$args[] = null;
-			}
-		}
+    public function __construct($reqType, $route, $body, $bodyRaw, $query, $headers)
+    {
+        $this->reqType = $reqType;
+        $this->route = $route;
+        $this->headers = $headers;
+        $this->body = $body;
+        $this->query = $query;
+        $this->bodyRaw = $bodyRaw;
 
-		return [ $method, $args ];
-	}
+        $this->currentUser = user::getCurrent($this->headers);
+    }
 
-	public function exec() {
-		list( $method, $args ) = $this->getMethod();
-
-		if ( !$this->auth( $method->name, $args ) ) {
-			throw new Exception\RequestException( 'Unauthorized', 401 );
-		}
-
-		$method->setAccessible( true );
-		try {
-			return $method->invokeArgs( $this, $args );
-		} catch ( \TypeError $error ) {
-            error_log( $error->getMessage() );
-			throw new Exception\RequestException( 'Bad request', 400 );
-		}
-	}
-
-	protected function getParamValue(\ReflectionParameter $param, $value) {
-		$type = static::getParamType( $param );
-
-		if ( $type ) {
-			if ( class_exists( $type ) ) {
-				$value = new $type( $value );
-			} else if ( class_exists( '\\' . $type ) ) {
-				$type = '\\' . $type;
-				$value = new $type( $value );
-			} else if ( $type == 'boolean' && $value == 'false' ) {
-				$value = false;
-			} else {
-				settype( $value, $type );
-			}
-		}
-
-		return $value;
-	}
-
-	/**
-	 * @param \ReflectionParameter $parameter
-	 * @return string|null
-	 */
-	protected static function getParamType( \ReflectionParameter $parameter ) {
-        if (method_exists($parameter, 'getType')) {
-            $type = $parameter->getType();
-            return !empty($type) ?
-                method_exists($type, 'getName') ? $type->getName() : $type->__toString() :
-                null;
+    protected function getRouteMapping($reqType)
+    {
+        if (isset($this->routeMapping[$reqType]) && is_array($this->routeMapping[$reqType])) {
+            return $this->routeMapping[$reqType];
         }
 
-        // PHP < 7
-	    $export = \ReflectionParameter::export(
-	        [
-	            $parameter->getDeclaringClass()->name,
-	            $parameter->getDeclaringFunction()->name
-	        ],
-	        $parameter->name,
-	        true
-	    );
+        if (isset($this->routeMapping['all']) && is_array($this->routeMapping['all'])) {
+            return $this->routeMapping['all'];
+        }
 
-	    return preg_match('/[\>] ([\\A-z]+) /', $export, $matches) ? $matches[1] : null;
-	}
+        return [];
+    }
 
-	protected function auth( $methodName, $args = null ) {
-		return $this->currentUser->hasAccess( static::CLASSNAME, $methodName );
-	}
+    protected function getMethod()
+    {
+        $reflection = new \ReflectionClass(static::CLASSNAME);
 
-	/**
-	* return OpenAPI fragment for this controller
-	* @return object
-	*/
-	protected function discover_get() {
-		return Response::json( OpenApi::discoverClass( static::CLASSNAME ) );
-	}
+        if (!empty($this->route[0]) && $reflection->hasMethod($this->route[0] . '_' . $this->reqType)) {
+            $method = $reflection->getMethod($this->route[0] . '_' . $this->reqType);
+            array_shift($this->route);
+        } elseif ($reflection->hasMethod($this->reqType)) {
+            $method = $reflection->getMethod($this->reqType);
+        } else {
+            throw new Exception\RequestException('Not found', 404);
+        }
 
-	protected static function getParameters( $method, $className ) {
-		return $method->getParameters();
-	}
+        $params = $method->getParameters();
+        $args = [];
+        $routeMapping = $this->getRouteMapping($method->name);
+        foreach ($params as $param) {
+            if (!empty($routeMapping) && isset($routeMapping[$param->name]) && isset($this->route[$routeMapping[$param->name]]) && $this->route[$routeMapping[$param->name]] != '') {
+                $args[] = $this->getParamValue($param, $this->route[$routeMapping[$param->name]]);
+            } elseif (isset($this->body[$param->name])) {
+                $args[] = $this->getParamValue($param, $this->body[$param->name]);
+            } elseif (isset($this->query[$param->name])) {
+                $args[] = $this->getParamValue($param, $this->query[$param->name]);
+            } elseif ($param->isDefaultValueAvailable()) {
+                $args[] = $param->getDefaultValue();
+            } else {
+                $args[] = null;
+            }
+        }
 
-	protected static function getRelatedEndpoints( $className ) {
-		return [];
-	}
+        return [ $method, $args ];
+    }
 
-	/**
-	 * Discover HTTP endpoints exposed by this class.
-	 * Returns an OpenAPI-style paths fragment.
-	 */
-	public static function discover( $all = false, $className = null, $getRelated = true ) {
+    public function exec()
+    {
+        list($method, $args) = $this->getMethod();
 
-		$hasParam = function( $params, $field ) {
-			foreach ($params as $param) {
-				if ( is_object($param) && $param->name == $field) return true;
-			}
+        if (!$this->auth($method->name, $args)) {
+            throw new Exception\RequestException('Unauthorized', 401);
+        }
 
-			return false;
-		};
+        $method->setAccessible(true);
 
-		$getDescription = function( $desc ) {
-			return trim( preg_replace ( ['$^[\s]*/\*\*$isU', '$[\s]*\*\/$isU', '$[\s]*\*[\s]*$isU'], ['', '', "\n"], $desc ) );
-		};
+        try {
+            return $method->invokeArgs($this, $args);
+        } catch (\TypeError $error) {
+            error_log($error->getMessage());
 
-		$reflection = new \ReflectionClass( static::CLASSNAME );
+            throw new Exception\RequestException('Bad request', 400);
+        }
+    }
 
-		$requestTypes = [ 'get', 'post', 'patch', 'put', 'delete', 'head' ];
-		$endpoints = [];
+    protected function getParamValue(\ReflectionParameter $param, $value)
+    {
+        $type = static::getParamType($param);
 
-		$tmp = explode( '\\', ( isset( $className ) ) ? $className : static::CLASSNAME );
-		$classNameOnly = array_pop( $tmp );
+        if ($type) {
+            if (class_exists($type)) {
+                $value = new $type($value);
+            } elseif (class_exists('\\' . $type)) {
+                $type = '\\' . $type;
+                $value = new $type($value);
+            } elseif ($type == 'boolean' && $value == 'false') {
+                $value = false;
+            } else {
+                settype($value, $type);
+            }
+        }
 
-		$methodTypes = ( $all ) ? \ReflectionMethod::IS_PUBLIC | \ReflectionMethod::IS_PROTECTED : \ReflectionMethod::IS_PUBLIC;
+        return $value;
+    }
 
-		$classMethods = $reflection->getMethods( $methodTypes );
-		$staticProps = $reflection->getDefaultProperties();
-		$fields = $staticProps['routeMapping'];
+    /**
+     * @param \ReflectionParameter $parameter
+     * @return string|null
+     */
+    protected static function getParamType(\ReflectionParameter $parameter)
+    {
+        $type = $parameter->getType();
+        if ($type instanceof \ReflectionNamedType) {
+            return $type->getName();
+        }
 
-		foreach ( $classMethods as $method ) {
-			if ( !in_array( $method->name, $requestTypes ) &&
-				 !( strpos( $method->name, '_' ) !== false &&
-			 	in_array( substr( $method->name, strpos( $method->name, '_' ) + 1 ), $requestTypes )
-			 	)
-				) continue;
+        return null;
+    }
 
-			$describe = [ 'name' => $method->name, 'urlparams' => [], 'params' => [] ];
-			$params = static::getParameters( $method, $className );
-			$ignore = [];
+    protected function auth($methodName, $args = null)
+    {
+        return $this->currentUser->hasAccess(static::CLASSNAME, $methodName);
+    }
 
-			$routeMapping = [];
-			if ( isset( $fields[$method->name] ) && is_array( $fields[$method->name] ) ) {
-				$routeMapping = $fields[$method->name];
-			} else if ( !empty( $fields['all'] ) && is_array( $fields['all'] ) ) {
-				$routeMapping = $fields['all'];
-			};
+    /**
+    * return OpenAPI fragment for this controller
+    * @return object
+    */
+    protected function discover_get()
+    {
+        return Response::json(OpenApi::discoverClass(static::CLASSNAME));
+    }
 
-			if ( !empty( $routeMapping ) ) {
-				$values = array_values( $routeMapping );
-				if ( isset( $values[0] ) && is_array( $values[0] ) ) $routeMapping = [];
-				asort( $routeMapping );
-				foreach ( $routeMapping as $field => $index ) {
-					if ( $hasParam($params, $field) ) {
-						$describe['urlparams'][$index] = $field;
-						$ignore[] = $field;
-					}
-				}
-			}
+    protected static function getParameters($method, $className)
+    {
+        return $method->getParameters();
+    }
 
-			$describe['urlparams'] = array_values( $describe['urlparams'] );
+    protected static function getRelatedEndpoints($className)
+    {
+        return [];
+    }
 
-			foreach ( $params as $param ) {
-				$paramWithType = ( is_object($param) ) ? [ 'name' => $param->name, 'type' => static::getParamType($param) ] : $param;
-				if ( in_array( $paramWithType['name'], $ignore ) ) continue;
-				$describe['params'][] = $paramWithType;
-			}
+    /**
+     * Discover HTTP endpoints exposed by this class.
+     * Returns an OpenAPI-style paths fragment.
+     */
+    public static function discover($all = false, $className = null, $getRelated = true)
+    {
 
-			$methodName = $method->name;
-			if ( strpos( $method->name, '_' ) !== false ) {
-				list($methodName, $reqType) = explode('_', $methodName);
-			}
+        $hasParam = function ($params, $field) {
+            foreach ($params as $param) {
+                if (is_object($param) && $param->name == $field) {
+                    return true;
+                }
+            }
 
-			$endpoint = $classNameOnly;
-			if ( isset( $reqType ) ) {
-				$endpoint .= '/' . $methodName;
-				$methodName = $reqType;
-			}
+            return false;
+        };
 
-			if ( empty( $endpoints[$endpoint] ) ) {
-				$endpoints[$endpoint] = ['endpoint' => $endpoint, 'methods' => [], 'description' => '', 'type' => static::$type];
-				if ( !isset( $reqType ) ) {
-					$endpoints[$endpoint]['description'] = $getDescription( $reflection->getDocComment() );
-				}
-			}
+        $getDescription = function ($desc) {
+            return trim(preg_replace(['$^[\s]*/\*\*$isU', '$[\s]*\*\/$isU', '$[\s]*\*[\s]*$isU'], ['', '', "\n"], $desc));
+        };
 
-			$describe['description'] = $getDescription( $method->getDocComment() );
-			$describe['name'] = $methodName;
-			unset($reqType);
-			unset($methodName);
+        $reflection = new \ReflectionClass(static::CLASSNAME);
 
-			$endpoints[$endpoint]['methods'][] = $describe;
-		}
+        $requestTypes = [ 'get', 'post', 'patch', 'put', 'delete', 'head' ];
+        $endpoints = [];
 
-		if ( !empty( $className ) && $getRelated ) {
-			$relatedEndpoints = static::getRelatedEndpoints( $className );
-			$endpoints = array_merge( $endpoints, $relatedEndpoints );
-		}
+        $tmp = explode('\\', (isset($className)) ? $className : static::CLASSNAME);
+        $classNameOnly = array_pop($tmp);
 
-		return array_values( $endpoints );
-	}
+        $methodTypes = ($all) ? \ReflectionMethod::IS_PUBLIC | \ReflectionMethod::IS_PROTECTED : \ReflectionMethod::IS_PUBLIC;
 
+        $classMethods = $reflection->getMethods($methodTypes);
+        $staticProps = $reflection->getDefaultProperties();
+        $fields = $staticProps['routeMapping'];
+
+        foreach ($classMethods as $method) {
+            if (!in_array($method->name, $requestTypes)
+                 && !(
+                     strpos($method->name, '_') !== false
+                && in_array(substr($method->name, strpos($method->name, '_') + 1), $requestTypes)
+                 )
+            ) {
+                continue;
+            }
+
+            $describe = [ 'name' => $method->name, 'urlparams' => [], 'params' => [] ];
+            $params = static::getParameters($method, $className);
+            $ignore = [];
+
+            $routeMapping = [];
+            if (isset($fields[$method->name]) && is_array($fields[$method->name])) {
+                $routeMapping = $fields[$method->name];
+            } elseif (!empty($fields['all']) && is_array($fields['all'])) {
+                $routeMapping = $fields['all'];
+            };
+
+            if (!empty($routeMapping)) {
+                $values = array_values($routeMapping);
+                if (isset($values[0]) && is_array($values[0])) {
+                    $routeMapping = [];
+                }
+                asort($routeMapping);
+                foreach ($routeMapping as $field => $index) {
+                    if ($hasParam($params, $field)) {
+                        $describe['urlparams'][$index] = $field;
+                        $ignore[] = $field;
+                    }
+                }
+            }
+
+            $describe['urlparams'] = array_values($describe['urlparams']);
+
+            foreach ($params as $param) {
+                $paramWithType = (is_object($param)) ? [ 'name' => $param->name, 'type' => static::getParamType($param) ] : $param;
+                if (in_array($paramWithType['name'], $ignore)) {
+                    continue;
+                }
+                $describe['params'][] = $paramWithType;
+            }
+
+            $methodName = $method->name;
+            if (strpos($method->name, '_') !== false) {
+                list($methodName, $reqType) = explode('_', $methodName);
+            }
+
+            $endpoint = $classNameOnly;
+            if (isset($reqType)) {
+                $endpoint .= '/' . $methodName;
+                $methodName = $reqType;
+            }
+
+            if (empty($endpoints[$endpoint])) {
+                $endpoints[$endpoint] = ['endpoint' => $endpoint, 'methods' => [], 'description' => '', 'type' => static::$type];
+                if (!isset($reqType)) {
+                    $endpoints[$endpoint]['description'] = $getDescription($reflection->getDocComment());
+                }
+            }
+
+            $describe['description'] = $getDescription($method->getDocComment());
+            $describe['name'] = $methodName;
+            unset($reqType);
+            unset($methodName);
+
+            $endpoints[$endpoint]['methods'][] = $describe;
+        }
+
+        if (!empty($className) && $getRelated) {
+            $relatedEndpoints = static::getRelatedEndpoints($className);
+            $endpoints = array_merge($endpoints, $relatedEndpoints);
+        }
+
+        return array_values($endpoints);
+    }
 }

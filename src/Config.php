@@ -1,11 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Phresto;
 
 class Config
 {
-
     public static $CurrentModule;
+
     private static $configCache = [];
 
     public static function getConfig($name, $module = null)
@@ -19,10 +21,12 @@ class Config
             $path = self::getPath($name);
         }
 
-        if (!is_file($path))
+        if (!is_file($path)) {
             return [];
+        }
 
         self::$configCache[$path] = parse_ini_file($path, true);
+
         return self::$configCache[$path];
     }
 
@@ -33,10 +37,12 @@ class Config
             $path = self::getPath($name);
         }
 
-        if (!is_file($path))
+        if (!is_file($path)) {
             return false;
+        }
 
         unlink($path);
+
         return true;
 
     }
@@ -51,6 +57,7 @@ class Config
                 $merged[$key] = $value;
             }
         }
+
         return $merged;
     }
 
@@ -72,10 +79,10 @@ class Config
 
     public static function saveConfig($name, $config, $module = null)
     {
-        $content = "";
+        $content = '';
 
         foreach ($config as $key => $elem) {
-            $content .= "[" . $key . "]\n";
+            $content .= '[' . $key . "]\n";
             foreach ($elem as $key2 => $elem2) {
                 if (is_array($elem2)) {
                     for ($i = 0; $i < count($elem2); $i++) {
@@ -97,15 +104,14 @@ class Config
 
     private static function getElementText($value)
     {
-        if ($value == "") {
+        if ($value == '') {
             return "\n";
-        } else if (is_string($value)) {
+        } elseif (is_string($value)) {
             return "\"{$value}\"\n";
-        } else if (is_bool($value)) {
+        } elseif (is_bool($value)) {
             return ($value) ? "true\n" : "false\n";
         }
 
         return "{$value}\n";
     }
-
 }

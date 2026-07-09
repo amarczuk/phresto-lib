@@ -3,6 +3,16 @@
 # Learn more about .gitignore:
 #     https://www.atlassian.com/git/tutorials/saving-changes/gitignore
 
+# PHP-CS-Fixer cache
+.php-cs-fixer.cache
+
+# Local Composer phar
+composer
+composer.phar
+
+# Composer lock file (this is a library/framework; consumers should generate their own)
+composer.lock
+
 # Node artifact files
 node_modules/
 dist/
