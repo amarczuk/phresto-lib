@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace Phresto;
 
 use Phresto\Exception\RequestException;
+use Phresto\Interf\RequestContext as RequestContextInterface;
+use ReflectionClass;
+use TypeError;
 
 class ModelController extends Controller
 {
@@ -20,11 +23,11 @@ class ModelController extends Controller
 
     protected static $type = 'model';
 
-    public function __construct($modelName, $reqType, $route, $body, $bodyRaw, $query, $headers, ?Model $contextModel = null)
+    public function __construct($modelName, ?RequestContextInterface $requestContext = null, ?Model $contextModel = null)
     {
         $this->modelName = $modelName;
         $this->contextModel = $contextModel;
-        parent::__construct($reqType, $route, $body, $bodyRaw, $query, $headers);
+        parent::__construct($requestContext);
     }
 
     public function exec()
@@ -32,7 +35,7 @@ class ModelController extends Controller
         list($method, $args) = $this->getMethod();
         $this->methodName = $method->name;
         if (!$this->auth($method->name, $args)) {
-            throw new Exception\RequestException('Unauthorized', 401);
+            throw new RequestException('Unauthorized', 401);
         }
 
         if ($this->hasNextRoute()) {
@@ -45,10 +48,10 @@ class ModelController extends Controller
 
         try {
             return $method->invokeArgs($this, $args);
-        } catch (\TypeError $error) {
+        } catch (TypeError $error) {
             error_log($error->getMessage());
 
-            throw new Exception\RequestException('Bad request', 400);
+            throw new RequestException('Bad request', 400);
         }
     }
 
@@ -61,7 +64,7 @@ class ModelController extends Controller
 
     protected function auth($methodName, $args = null)
     {
-        return $this->currentUser->hasAccess($this->modelName, $methodName);
+        return $this->authContext->hasAccess($this->modelName, $methodName);
     }
 
     protected function getNextRoute()
@@ -93,7 +96,8 @@ class ModelController extends Controller
         $modelClass = 'Phresto\\Modules\\Model\\' . $model;
         $newRoute = $this->getNextRoute();
         array_shift($newRoute);
-        $modelContr = Container::{'Phresto\\ModelController'}($modelClass, $this->reqType, $newRoute, $this->body, $this->bodyRaw, $this->query, $this->headers, $thisModel);
+        $childContext = $this->requestContext->withRoute($newRoute);
+        $modelContr = Container::{'Phresto\\ModelController'}($modelClass, $childContext, $thisModel);
 
         return $modelContr->exec();
     }
@@ -103,7 +107,7 @@ class ModelController extends Controller
         $params = $method->getParameters();
 
         if (in_array($method->name, ['post', 'put', 'patch'])) {
-            $reflection = new \ReflectionClass($className);
+            $reflection = new ReflectionClass($className);
             $staticProps = $reflection->getStaticProperties();
             $modelFields = $staticProps['_fields'];
             foreach ($modelFields as $key => $value) {
@@ -127,7 +131,7 @@ class ModelController extends Controller
             return null;
         };
 
-        $reflection = new \ReflectionClass($className);
+        $reflection = new ReflectionClass($className);
         $staticProps = $reflection->getStaticProperties();
         if (empty($staticProps['_relations'])) {
             return [];

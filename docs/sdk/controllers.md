@@ -102,7 +102,7 @@ Controllers inherit:
 
 ```php
 protected function auth( $methodName, $args = null ) {
-    return $this->currentUser->hasAccess( static::CLASSNAME, $methodName );
+    return $this->authContext->hasAccess( static::CLASSNAME, $methodName );
 }
 ```
 

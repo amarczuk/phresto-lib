@@ -7,11 +7,14 @@ namespace Phresto\Modules\Controller;
 use Phresto\Container;
 use Phresto\CustomModelController;
 use Phresto\Exception\RequestException;
+use Phresto\Modules\AuthService;
+use Phresto\Modules\Middleware\auth;
+use Phresto\Modules\Model\profile;
 use Phresto\Response;
 
 /**
-* Additional user's REST endpoints
-*/
+ * Additional user's REST endpoints
+ */
 class user extends CustomModelController
 {
     public const CLASSNAME = __CLASS__;
@@ -19,10 +22,11 @@ class user extends CustomModelController
 
     protected $routeMapping = [ 'all' => [ 'id' => 0 ] ];
 
+    protected static $middlewares = [ auth::class ];
+
     protected function auth($methodName, $args = null)
     {
-
-        $hasAccess = $this->currentUser->hasAccess($this->modelName, $methodName);
+        $hasAccess = $this->authContext->hasAccess($this->modelName, $methodName);
         if (in_array($methodName, ['authenticate_post', 'register_post', 'current_get' ])) {
             return $hasAccess;
         }
@@ -33,8 +37,8 @@ class user extends CustomModelController
          */
         return $hasAccess
                && (
-                   $this->currentUser->status == 2
-                 || (!empty($args[0]) && $this->currentUser->getIndex() == $args[0])
+                   $this->authContext->getStatus() == 2
+                 || (!empty($args[0]) && $this->authContext->getUserId() == $args[0])
                  || (in_array($methodName, ['head', 'get']) && !empty($this->contextModel))
                );
     }
@@ -65,7 +69,7 @@ class user extends CustomModelController
         }
 
         // only super user can change status and profile
-        if ($this->currentUser->status != 2) {
+        if ($this->authContext->getStatus() != 2) {
             if (!empty($this->body['status'])) {
                 $this->body['status'] = $modelInstance->status;
             }
@@ -99,7 +103,7 @@ class user extends CustomModelController
         $modelInstance = Container::{$this->modelName}($id);
 
         // only super user can change status and profile
-        if ($this->currentUser->status != 2) {
+        if ($this->authContext->getStatus() != 2) {
             if (!empty($this->body['status'])) {
                 $this->body['status'] = $modelInstance->status;
             }
@@ -116,19 +120,28 @@ class user extends CustomModelController
 
     public function authenticate_post(string $email, string $password)
     {
-        $user = static::MODELCLASS;
-        $token = $user::login($email, $password);
+        $result = AuthService::login($email, $password, $this->headers);
+        setcookie('prsid', $result['token'], 0, '/', null, false, true);
 
-        $ua = (!empty($this->headers['User-Agent'])) ? $this->headers['User-Agent'] : '';
-        $encrypted = $token->encrypt($ua);
-        setcookie('prsid', $encrypted, 0, '/', null, false, true);
+        return Response::json($result);
+    }
 
-        return Response::json([ 'token' => $encrypted, 'expires' => $token->expires->format(\DateTimeInterface::ATOM) ]);
+    public function logout_post()
+    {
+        $token = $this->authContext->getToken();
+        if ($token) {
+            AuthService::logout($token, $this->headers);
+        }
+        setcookie('prsid', '', time() - 3600, '/', null, false, true);
+
+        return Response::json([ 'ok' => true ]);
     }
 
     public function current_get()
     {
-        return Response::json($this->currentUser);
+        $user = AuthService::userFromContext($this->authContext);
+
+        return Response::json($user);
     }
 
     public function register_post(string $email, string $name, string $password)
@@ -139,10 +152,20 @@ class user extends CustomModelController
         $user->name = $name;
         $user->password = $password;
         $user->status = 1;
-        $user->profile = 2;
+        $user->profile = $this->defaultUserProfileId();
 
         $user->save();
 
         return $this->authenticate_post($email, $password);
+    }
+
+    protected function defaultUserProfileId(): int
+    {
+        $users = profile::find([
+            'where' => [ 'name' => 'user' ],
+            'limit' => 1,
+        ]);
+
+        return (!empty($users) && !empty($users[0])) ? (int) $users[0]->getIndex() : 2;
     }
 }

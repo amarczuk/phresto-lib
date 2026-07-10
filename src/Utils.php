@@ -88,7 +88,7 @@ class Utils
         $base = PHRESTO_ROOT . '/modules/';
         $modules = $getFiles($base, GLOB_ONLYDIR);
 
-        $types = ['Controller', 'Model', 'class', 'Interf'];
+        $types = ['Controller', 'Model', 'Middleware', 'class', 'Interf'];
 
         $config = [];
 

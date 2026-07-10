@@ -9,6 +9,7 @@ modules/
   example/
     controller/    -> Phresto\Modules\Controller\example
     model/       -> Phresto\Modules\Model\example
+    middleware/  -> Phresto\Modules\Middleware\example
     class/       -> Phresto\Modules\example
     config/      -> INI overrides
     static/      -> JS/CSS
@@ -22,7 +23,8 @@ modules/
 [example]
 Controller[] = "foo.php"
 Model[] = "bar.php"
-class[] = "baz.php"
+Middleware[] = "baz.php"
+class[] = "qux.php"
 ```
 
 This registry is used by `Utils::autoload()` to resolve `Phresto\Modules\...` class names at runtime.
@@ -33,7 +35,8 @@ This registry is used by `Utils::autoload()` to resolve `Phresto\Modules\...` cl
 
 Given `Phresto\Modules\Controller\foo`, it looks for `modules/<module>/controller/foo.php`.
 Given `Phresto\Modules\Model\bar`, it looks for `modules/<module>/model/bar.php`.
-Given `Phresto\Modules\baz`, it looks for `modules/<module>/class/baz.php`.
+Given `Phresto\Modules\Middleware\baz`, it looks for `modules/<module>/middleware/baz.php`.
+Given `Phresto\Modules\qux`, it looks for `modules/<module>/class/qux.php`.
 
 The first module containing the requested file wins. Because class names map directly to file names, a module cannot contain two files with the same base class name.
 

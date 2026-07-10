@@ -52,6 +52,17 @@ dbname=phresto
 
 The section name (`mysql`) is the connection key used by models via `const DB = 'mysql'`.
 
+## Set the JWT secret
+
+Edit `config/app.ini` and replace the placeholder with a strong random secret:
+
+```ini
+[app]
+jwtSecret=your-long-random-secret-here
+```
+
+Tokens are signed with this secret. If it leaks, attackers can forge tokens.
+
 ## Create the database tables
 
 Run the model generator script:
@@ -62,13 +73,20 @@ php scripts/create_models.php
 
 This introspects every model and creates or alters the corresponding MySQL tables, indexes, and foreign keys.
 
-## Run migrations (optional)
+## Run migrations
 
-Place migration classes in `migration/` following the example in `migration/example.php`, then run:
+The bundled `migration/initial_user_setup.php` seeds the `visitor`, `user` and `admin` profiles and creates a default admin user. Run it after `create_models.php`:
 
 ```bash
 php scripts/run_migrations.php
 ```
+
+Default admin credentials:
+
+- email: `admin@localhost`
+- password: `admin`
+
+Change these after the first login.
 
 ## Start the server
 

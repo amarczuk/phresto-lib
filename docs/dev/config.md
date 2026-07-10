@@ -39,7 +39,7 @@ Parsed configs are stored in a static cache keyed by path.
 
 | File | Purpose |
 |------|---------|
-| `config/app.ini` | Environment, debug, CORS, token encryption password. |
+| `config/app.ini` | Environment, debug, CORS, JWT signing secret. |
 | `config/db.ini` | Database connection definitions. |
 | `config/modules.ini` | Auto-generated registry of module files. |
 | `config/openapi.json` | Auto-generated OpenAPI 3.0 spec. |
@@ -50,7 +50,7 @@ Parsed configs are stored in a static cache keyed by path.
 [app]
 env=dev
 debug=on
-tokenEncryptionPass=phrestoToken
+jwtSecret=your-long-random-secret-here
 ```
 
 When `env=dev`, module discovery and the OpenAPI spec are refreshed on every request (see `Utils::registerAutoload()`).

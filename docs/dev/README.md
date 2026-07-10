@@ -31,7 +31,7 @@ Phresto is a small PHP framework for building REST APIs. It is built around thes
 ```
 src/
   Router.php          # Entry-point routing
-  Controller.php      # Base controller, parameter binding, auth
+  Controller.php      # Base controller, parameter binding, auth context
   ModelController.php   # REST CRUD for models + related-model escalation
   CustomModelController.php # User extension point for model controllers
   Model.php           # Base model with metadata helpers
@@ -42,12 +42,16 @@ src/
   Config.php          # INI file loader
   Container.php       # Reflection factory
   MySQLConnector.php  # MySQL connection wrapper
+  Interf/             # Middleware and RequestContext interfaces
+  Auth/               # AuthContext, JWT, revocation cache, client fingerprint
+  RequestContext.php  # Default RequestContext implementation (public properties, withAuthContext, withRoute)
 template/
   bootstrap.php       # Web entry point (always returns JSON now)
   .htaccess           # Rewrite rules and security blocks
   modules/            # Built-in modules (user is the only one left)
   scripts/            # Migration and model generators
   config/             # INI and cached openapi.json
+  migration/          # Initial user setup migration
 ```
 
 ## What changed in v2
@@ -60,6 +64,8 @@ template/
 - Removed the `lusitanian/oauth` dependency.
 - Requires **PHP 8.0 or newer**. Removed PHP 7.x compatibility code (e.g. `ReflectionParameter::export()`) and fixed PHP 8 deprecations.
 - Added `declare(strict_types=1)` to every PHP file and adopted **PSR-12** code style via [PHP-CS-Fixer](https://github.com/PHP-CS-Fixer/PHP-CS-Fixer).
+- Replaced database-stored session tokens with **stateless JWTs**. The DB now only keeps a revocation blacklist, with a file cache in front.
+- Moved authentication out of `Controller` and `user` model into a `Middleware` interface and a `RequestContext` that wraps an `AuthContext`. Middleware can be registered globally on `Router` or declared per controller/model.
 
 ## PHP 8 and code style
 

@@ -66,13 +66,15 @@ public function search_get( string $q, int $limit ) {
 
 ## Auth
 
-Controllers inherit:
+Controllers receive a `RequestContext` built by Router middleware instead of a loaded user model. The `RequestContext` carries the parsed request data plus an `AuthContext`; the default `auth()` checks permissions carried in that auth context:
 
 ```php
 protected function auth( $methodName, $args = null ) {
-    return $this->currentUser->hasAccess( static::CLASSNAME, $methodName );
+    return $this->authContext->hasAccess( static::CLASSNAME, $methodName );
 }
 ```
+
+The `Controller` constructor binds `$this->body`, `$this->query`, `$this->headers`, `$this->route`, `$this->bodyRaw`, `$this->reqType`, and `$this->authContext` as references to the `RequestContext` properties, so there is no per-request copying of large request bodies or headers.
 
 Override for public endpoints:
 
@@ -83,13 +85,28 @@ protected function auth( $methodName, $args = null ) {
 }
 ```
 
+## Middleware
+
+A controller (or model) can declare per-class middleware via a static `$middlewares` property:
+
+```php
+protected static $middlewares = [ \Phresto\Modules\Middleware\auth::class ];
+```
+
+Middleware is applied by `Router` before the controller executes. It receives and returns a `RequestContext` so it can resolve users, add logging, rate-limiting, validation, etc. To apply middleware globally, register it on the router in `bootstrap.php`:
+
+```php
+Phresto\Router::addMiddleware( new \Phresto\Modules\Middleware\auth() );
+```
+
 ## `ModelController`
 
-Framework-owned. Maps HTTP verbs to CRUD. It now uses `Response::json()` and plain text error messages (no language constants). The constructor signature was fixed to be explicitly nullable:
+Framework-owned. Maps HTTP verbs to CRUD. It now uses `Response::json()` and plain text error messages (no language constants). The constructor accepts a `RequestContext`:
 
 ```php
 public function __construct(
-    $modelName, $reqType, $route, $body, $bodyRaw, $query, $headers,
+    $modelName,
+    ?RequestContext $requestContext = null,
     ?Model $contextModel = null
 )
 ```

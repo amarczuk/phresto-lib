@@ -4,8 +4,38 @@ declare(strict_types=1);
 
 namespace Phresto;
 
+use Phresto\Auth\AuthContext;
+use Phresto\Auth\Jwt;
+use Phresto\Exception\RequestException;
+use Phresto\Interf\Middleware;
+use Phresto\Interf\RequestContext as RequestContextInterface;
+use ReflectionClass;
+
 class Router
 {
+    /** @var Middleware[] */
+    protected static $middlewares = [];
+
+    /**
+     * Register a global middleware applied to every request.
+     *
+     * @param Middleware $middleware
+     */
+    public static function addMiddleware(Middleware $middleware)
+    {
+        self::$middlewares[] = $middleware;
+    }
+
+    /**
+     * Return the list of globally registered middlewares.
+     *
+     * @return Middleware[]
+     */
+    public static function getMiddlewares(): array
+    {
+        return self::$middlewares;
+    }
+
     public static function route()
     {
         $reqType = mb_strtolower($_SERVER['REQUEST_METHOD']);
@@ -60,11 +90,15 @@ class Router
             }
         }
 
+        $requestContext = static::buildRequestContext($headers, $body, $bodyRaw, $query);
+
         if (empty($class)) {
             if (is_array($viewConf['app'])
                  && !empty($viewConf['app']['mainmodule'])
                  && class_exists('Phresto\\Modules\\Controller\\' . $viewConf['app']['mainmodule'])) {
-                $instance = Container::{'Phresto\\Modules\\Controller\\' . $viewConf['app']['mainmodule']}($reqType, $route, $body, $bodyRaw, $query, $headers);
+                $controllerClass = 'Phresto\\Modules\\Controller\\' . $viewConf['app']['mainmodule'];
+                $requestContext = static::applyMiddlewares($requestContext, $controllerClass);
+                $instance = Container::{$controllerClass}($requestContext);
             } else {
                 return Response::json([ 'status' => 404, 'message' => 'Not found' ], 404);
             }
@@ -77,11 +111,15 @@ class Router
             return Response::json($spec);
         } else {
             if (class_exists('Phresto\\Modules\\Controller\\' . $class)) {
-                $instance = Container::{'Phresto\\Modules\\Controller\\' . $class}($reqType, $route, $body, $bodyRaw, $query, $headers);
+                $controllerClass = 'Phresto\\Modules\\Controller\\' . $class;
+                $requestContext = static::applyMiddlewares($requestContext, $controllerClass);
+                $instance = Container::{$controllerClass}($requestContext);
             } elseif (class_exists('Phresto\\Modules\\Model\\' . $class)) {
-                $instance = Container::ModelController('Phresto\\Modules\\Model\\' . $class, $reqType, $route, $body, $bodyRaw, $query, $headers);
+                $modelClass = 'Phresto\\Modules\\Model\\' . $class;
+                $requestContext = static::applyMiddlewares($requestContext, $modelClass);
+                $instance = Container::ModelController($modelClass, $requestContext);
             } else {
-                throw new Exception\RequestException('Not found', 404);
+                throw new RequestException('Not found', 404);
             }
         }
 
@@ -104,6 +142,60 @@ class Router
         }
 
         return $headers;
+    }
+
+    protected static function buildRequestContext(
+        array $headers,
+        array $body = [],
+        string $bodyRaw = '',
+        array $query = []
+    ): RequestContextInterface {
+        return new RequestContext(
+            mb_strtolower($_SERVER['REQUEST_METHOD'] ?? 'get'),
+            explode('/', trim($_GET['PHRESTOREQUESTPATH'] ?? '', '/')),
+            $headers,
+            $body,
+            $bodyRaw,
+            $query,
+            new AuthContext($headers, Jwt::extractToken($headers))
+        );
+    }
+
+    /**
+     * Apply global middlewares plus any middlewares declared on a class.
+     *
+     * A controller or model can declare per-class middleware via a static
+     * $middlewares property:
+     *
+     *     protected static $middlewares = [\Phresto\Modules\Middleware\auth::class];
+     *
+     * @param RequestContextInterface $context
+     * @param string                  $className
+     * @return RequestContextInterface
+     */
+    protected static function applyMiddlewares(RequestContextInterface $context, string $className): RequestContextInterface
+    {
+        $middlewares = self::$middlewares;
+
+        if (class_exists($className)) {
+            $reflection = new ReflectionClass($className);
+            $staticProps = $reflection->getDefaultProperties();
+            if (!empty($staticProps['middlewares']) && is_array($staticProps['middlewares'])) {
+                foreach ($staticProps['middlewares'] as $middlewareClass) {
+                    if (is_string($middlewareClass) && class_exists($middlewareClass)) {
+                        $middlewares[] = new $middlewareClass();
+                    } elseif (is_object($middlewareClass) && $middlewareClass instanceof Middleware) {
+                        $middlewares[] = $middlewareClass;
+                    }
+                }
+            }
+        }
+
+        foreach ($middlewares as $middleware) {
+            $context = $middleware->process($context);
+        }
+
+        return $context;
     }
 
     public static function routeException($ex = 500, $message = '', $trace = '')

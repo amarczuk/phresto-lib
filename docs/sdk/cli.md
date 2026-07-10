@@ -56,6 +56,8 @@ vendor/bin/phresto -m
 
 This also rebuilds `config/openapi.json`. In `env=dev` this happens automatically on every request, but it is good practice to refresh it after deploying to production.
 
+The registry now also scans `modules/<module>/middleware/` for middleware classes.
+
 ## Rebuild the OpenAPI spec only
 
 ```bash

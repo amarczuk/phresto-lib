@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Phresto\Modules\Model;
 
+use DateTime;
 use Phresto\MySQLModel;
 
 class profile extends MySQLModel
@@ -39,6 +40,6 @@ class profile extends MySQLModel
 
     protected function default_created()
     {
-        return new \DateTime();
+        return new DateTime();
     }
 }

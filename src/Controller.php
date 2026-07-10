@@ -4,7 +4,14 @@ declare(strict_types=1);
 
 namespace Phresto;
 
-use Phresto\Modules\Model\user;
+use Phresto\Auth\AuthContext;
+use Phresto\Exception\RequestException;
+use Phresto\Interf\RequestContext as RequestContextInterface;
+use ReflectionClass;
+use ReflectionMethod;
+use ReflectionNamedType;
+use ReflectionParameter;
+use TypeError;
 
 class Controller
 {
@@ -33,20 +40,27 @@ class Controller
 
     protected $reqType = 'get';
 
-    protected $currentUser = null;
+    /** @var AuthContext */
+    protected $authContext;
+
+    /** @var RequestContextInterface|null */
+    protected $requestContext;
 
     protected static $type = 'controller';
 
-    public function __construct($reqType, $route, $body, $bodyRaw, $query, $headers)
+    public function __construct(?RequestContextInterface $requestContext = null)
     {
-        $this->reqType = $reqType;
-        $this->route = $route;
-        $this->headers = $headers;
-        $this->body = $body;
-        $this->query = $query;
-        $this->bodyRaw = $bodyRaw;
-
-        $this->currentUser = user::getCurrent($this->headers);
+        $this->requestContext = $requestContext ?: new RequestContext('get', [], [], [], '', [], new AuthContext());
+        $this->reqType = &$this->requestContext->method;
+        $this->route = &$this->requestContext->route;
+        $this->headers = &$this->requestContext->headers;
+        $this->body = &$this->requestContext->body;
+        $this->query = &$this->requestContext->query;
+        $this->bodyRaw = &$this->requestContext->bodyRaw;
+        $this->authContext = &$this->requestContext->authContext;
+        if (empty($this->authContext)) {
+            $this->authContext = new AuthContext($this->headers);
+        }
     }
 
     protected function getRouteMapping($reqType)
@@ -64,7 +78,7 @@ class Controller
 
     protected function getMethod()
     {
-        $reflection = new \ReflectionClass(static::CLASSNAME);
+        $reflection = new ReflectionClass(static::CLASSNAME);
 
         if (!empty($this->route[0]) && $reflection->hasMethod($this->route[0] . '_' . $this->reqType)) {
             $method = $reflection->getMethod($this->route[0] . '_' . $this->reqType);
@@ -72,7 +86,7 @@ class Controller
         } elseif ($reflection->hasMethod($this->reqType)) {
             $method = $reflection->getMethod($this->reqType);
         } else {
-            throw new Exception\RequestException('Not found', 404);
+            throw new RequestException('Not found', 404);
         }
 
         $params = $method->getParameters();
@@ -100,21 +114,21 @@ class Controller
         list($method, $args) = $this->getMethod();
 
         if (!$this->auth($method->name, $args)) {
-            throw new Exception\RequestException('Unauthorized', 401);
+            throw new RequestException('Unauthorized', 401);
         }
 
         $method->setAccessible(true);
 
         try {
             return $method->invokeArgs($this, $args);
-        } catch (\TypeError $error) {
+        } catch (TypeError $error) {
             error_log($error->getMessage());
 
-            throw new Exception\RequestException('Bad request', 400);
+            throw new RequestException('Bad request', 400);
         }
     }
 
-    protected function getParamValue(\ReflectionParameter $param, $value)
+    protected function getParamValue(ReflectionParameter $param, $value)
     {
         $type = static::getParamType($param);
 
@@ -135,13 +149,13 @@ class Controller
     }
 
     /**
-     * @param \ReflectionParameter $parameter
+     * @param ReflectionParameter $parameter
      * @return string|null
      */
-    protected static function getParamType(\ReflectionParameter $parameter)
+    protected static function getParamType(ReflectionParameter $parameter)
     {
         $type = $parameter->getType();
-        if ($type instanceof \ReflectionNamedType) {
+        if ($type instanceof ReflectionNamedType) {
             return $type->getName();
         }
 
@@ -150,7 +164,7 @@ class Controller
 
     protected function auth($methodName, $args = null)
     {
-        return $this->currentUser->hasAccess(static::CLASSNAME, $methodName);
+        return $this->authContext->hasAccess(static::CLASSNAME, $methodName);
     }
 
     /**
@@ -193,7 +207,7 @@ class Controller
             return trim(preg_replace(['$^[\s]*/\*\*$isU', '$[\s]*\*\/$isU', '$[\s]*\*[\s]*$isU'], ['', '', "\n"], $desc));
         };
 
-        $reflection = new \ReflectionClass(static::CLASSNAME);
+        $reflection = new ReflectionClass(static::CLASSNAME);
 
         $requestTypes = [ 'get', 'post', 'patch', 'put', 'delete', 'head' ];
         $endpoints = [];
@@ -201,7 +215,7 @@ class Controller
         $tmp = explode('\\', (isset($className)) ? $className : static::CLASSNAME);
         $classNameOnly = array_pop($tmp);
 
-        $methodTypes = ($all) ? \ReflectionMethod::IS_PUBLIC | \ReflectionMethod::IS_PROTECTED : \ReflectionMethod::IS_PUBLIC;
+        $methodTypes = ($all) ? ReflectionMethod::IS_PUBLIC | ReflectionMethod::IS_PROTECTED : ReflectionMethod::IS_PUBLIC;
 
         $classMethods = $reflection->getMethods($methodTypes);
         $staticProps = $reflection->getDefaultProperties();

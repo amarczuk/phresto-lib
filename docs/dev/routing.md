@@ -10,9 +10,9 @@ Given a request:
 GET /product/5/reviews
 ```
 
-`Router` decides the first segment is a model because `modules/product/model/product.php` exists. It instantiates `Phresto\ModelController` with `$modelName = 'Phresto\\Modules\\Model\\product'`.
+`Router` decides the first segment is a model because `modules/product/model/product.php` exists. It instantiates `Phresto\ModelController` with `$modelName = 'Phresto\\Modules\\Model\\product'` and a `RequestContext`.
 
-If the first segment matched a custom controller file (`modules/<x>/controller/<x>.php`), it would instantiate `Phresto\Modules\Controller\x`.
+If the first segment matched a custom controller file (`modules/<x>/controller/<x>.php`), it would instantiate `Phresto\Modules\Controller\x` with a `RequestContext`.
 
 ## Method resolution
 
@@ -75,6 +75,15 @@ Returns the same specification as YAML.
 ### `GET /<controller>/discover`
 
 Still works, but now returns the OpenAPI fragment for that controller via `OpenApi::discoverClass()` instead of the old custom JSON discovery format.
+
+## Middleware
+
+`Router` builds a `RequestContext` from the HTTP request (method, route, headers, body, query) and a base `AuthContext`, then applies middleware before invoking the controller:
+
+1. Global middlewares registered with `Router::addMiddleware()`.
+2. Per-class middlewares declared via a controller/model's static `$middlewares` property.
+
+Each middleware receives the current `RequestContext` and returns a (possibly modified) `RequestContext`. Authentication middleware updates the wrapped `AuthContext` via `$context->withAuthContext(...)`. Route escalation uses `$context->withRoute(...)` to pass a trimmed route to the child controller. The final context is passed to the controller constructor. This keeps authentication out of controllers and models and makes middleware reusable for logging, validation, rate limiting, etc.
 
 ## Error responses
 

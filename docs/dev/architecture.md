@@ -40,8 +40,8 @@ Special routes:
 
 Base class for all custom controllers. Responsibilities:
 
-- Stores request context: `$reqType`, `$route`, `$body`, `$query`, `$headers`.
-- Resolves `$currentUser` from the `prsid` cookie or `Authorization` header.
+- Stores request context: `$reqType`, `$route`, `$body`, `$query`, `$headers`, all read from a `RequestContext`.
+- Receives a `RequestContext` from `Router` middleware; the `RequestContext` contains the parsed request data and an `AuthContext` resolved from the `Authorization` header.
 - Uses reflection to find the method matching the URL (`getMethod()`).
 - Binds method parameters from URL segments, body JSON, or query string.
 - Calls `auth($methodName, $args)` before executing a method.
@@ -107,5 +107,6 @@ See [`models.md`](models.md) and [`database.md`](database.md).
 - `src/View.php` and the HTML templating pipeline.
 - `template/view/`, `template/lang/`, `template/bower.json`, `template/.bowerrc`, `template/static/index.html`.
 - `template/modules/admin/` and `template/modules/explorer/`.
-- `template/modules/user/class/` (social OAuth adapters), `template/modules/user/view/`, `template/modules/user/config/social.ini`.
+- Old social OAuth adapters in `template/modules/user/class/`, `template/modules/user/view/`, `template/modules/user/config/social.ini`.
+- Database-stored session tokens; replaced by stateless JWTs and a revocation blacklist.
 - `lusitanian/oauth` Composer dependency.
