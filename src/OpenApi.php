@@ -89,7 +89,7 @@ class OpenApi
                 'title' => !empty($app['app']['title']) ? $app['app']['title'] : 'Phresto API',
                 'version' => !empty($app['app']['version']) ? $app['app']['version'] : '1.0.0',
             ],
-            'paths' => $paths,
+            'paths' => static::sortPaths($paths),
             'components' => [
                 'schemas' => $schemas,
                 'securitySchemes' => [
@@ -285,14 +285,15 @@ class OpenApi
         $paths = [
             '/' . $name => [
                 'get' => static::makeOperation('List ' . $name, [ '200' => [ 'description' => 'List of ' . $name, 'content' => [ 'application/json' => [ 'schema' => [ 'type' => 'array', 'items' => [ '$ref' => '#/components/schemas/' . $schemaName ] ] ] ] ] ]),
+                'head' => static::makeOperation('Count ' . $name, [ '200' => [ 'description' => 'Count returned in X-Count header' ] ]),
                 'post' => static::makeOperation('Create ' . $name, [ '201' => [ 'description' => 'Created ' . $name ] ], $schemaName),
             ],
             '/' . $name . '/{id}' => [
                 'get' => static::makeOperation('Read ' . $name, [ '200' => [ 'description' => 'A ' . $name ] ], null, [ 'id' ]),
+                'head' => static::makeOperation('Check ' . $name . ' exists', [ '200' => [ 'description' => 'Exists' ] ], null, [ 'id' ]),
                 'patch' => static::makeOperation('Update ' . $name, [ '200' => [ 'description' => 'Updated ' . $name ] ], $schemaName, [ 'id' ]),
                 'put' => static::makeOperation('Upsert ' . $name, [ '200' => [ 'description' => 'Upserted ' . $name ] ], $schemaName, [ 'id' ]),
                 'delete' => static::makeOperation('Delete ' . $name, [ '200' => [ 'description' => 'Deleted ' . $name ] ], null, [ 'id' ]),
-                'head' => static::makeOperation('Check ' . $name . ' exists', [ '200' => [ 'description' => 'Exists' ] ], null, [ 'id' ]),
             ],
         ];
 
@@ -416,6 +417,13 @@ class OpenApi
         }
 
         return trim(preg_replace('/^\s*\/\*\*|\s*\*\/|\s*\*\s?/m', '', $comment));
+    }
+
+    protected static function sortPaths(array $paths): array
+    {
+        ksort($paths);
+
+        return $paths;
     }
 
     protected static function getParamType(\ReflectionParameter $parameter)
