@@ -78,10 +78,7 @@ Still works, but now returns the OpenAPI fragment for that controller via `OpenA
 
 ## Middleware
 
-`Router` builds a `RequestContext` from the HTTP request (method, route, headers, body, query) and a base `AuthContext`, then applies middleware before invoking the controller:
-
-1. Global middlewares registered with `Router::addMiddleware()`.
-2. Per-class middlewares declared via a controller/model's static `$middlewares` property.
+`Router` builds a `RequestContext` from the HTTP request (method, route, headers, body, query) and a base `AuthContext`, then applies middleware before invoking the controller. The preferred v2 pattern is a single global middleware stack registered with `Router::addMiddleware()` in `bootstrap.php`. Per-class middleware can still be declared via a static `$middlewares` property, but the default user module relies on the global `auth` middleware instead.
 
 Each middleware receives the current `RequestContext` and returns a (possibly modified) `RequestContext`. Authentication middleware updates the wrapped `AuthContext` via `$context->withAuthContext(...)`. Route escalation uses `$context->withRoute(...)` to pass a trimmed route to the child controller. The final context is passed to the controller constructor. This keeps authentication out of controllers and models and makes middleware reusable for logging, validation, rate limiting, etc.
 

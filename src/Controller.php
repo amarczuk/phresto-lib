@@ -28,18 +28,6 @@ class Controller
 
     protected $queryDescription = [];
 
-    protected $headers = [];
-
-    protected $body = [];
-
-    protected $bodyRaw = '';
-
-    protected $query = [];
-
-    protected $route = [];
-
-    protected $reqType = 'get';
-
     /** @var AuthContext */
     protected $authContext;
 
@@ -51,16 +39,31 @@ class Controller
     public function __construct(?RequestContextInterface $requestContext = null)
     {
         $this->requestContext = $requestContext ?: new RequestContext('get', [], [], [], '', [], new AuthContext());
-        $this->reqType = &$this->requestContext->method;
-        $this->route = &$this->requestContext->route;
-        $this->headers = &$this->requestContext->headers;
-        $this->body = &$this->requestContext->body;
-        $this->query = &$this->requestContext->query;
-        $this->bodyRaw = &$this->requestContext->bodyRaw;
-        $this->authContext = &$this->requestContext->authContext;
-        if (empty($this->authContext)) {
-            $this->authContext = new AuthContext($this->headers);
+        $this->authContext = $this->requestContext->authContext ?: new AuthContext($this->requestContext->headers);
+    }
+
+    public function __get($name)
+    {
+        switch ($name) {
+            case 'reqType':
+                return $this->requestContext->method;
+            case 'route':
+            case 'headers':
+            case 'body':
+            case 'query':
+            case 'bodyRaw':
+                return $this->requestContext->{$name};
         }
+
+        $trace = debug_backtrace();
+        trigger_error(
+            'Undefined property via __get(): ' . $name
+            . ' in ' . $trace[0]['file']
+            . ' on line ' . $trace[0]['line'],
+            E_USER_NOTICE
+        );
+
+        return null;
     }
 
     protected function getRouteMapping($reqType)
@@ -79,12 +82,14 @@ class Controller
     protected function getMethod()
     {
         $reflection = new ReflectionClass(static::CLASSNAME);
+        $reqType = $this->requestContext->method;
+        $route = &$this->requestContext->route;
 
-        if (!empty($this->route[0]) && $reflection->hasMethod($this->route[0] . '_' . $this->reqType)) {
-            $method = $reflection->getMethod($this->route[0] . '_' . $this->reqType);
-            array_shift($this->route);
-        } elseif ($reflection->hasMethod($this->reqType)) {
-            $method = $reflection->getMethod($this->reqType);
+        if (!empty($route[0]) && $reflection->hasMethod($route[0] . '_' . $reqType)) {
+            $method = $reflection->getMethod($route[0] . '_' . $reqType);
+            array_shift($route);
+        } elseif ($reflection->hasMethod($reqType)) {
+            $method = $reflection->getMethod($reqType);
         } else {
             throw new RequestException('Not found', 404);
         }
@@ -93,12 +98,12 @@ class Controller
         $args = [];
         $routeMapping = $this->getRouteMapping($method->name);
         foreach ($params as $param) {
-            if (!empty($routeMapping) && isset($routeMapping[$param->name]) && isset($this->route[$routeMapping[$param->name]]) && $this->route[$routeMapping[$param->name]] != '') {
-                $args[] = $this->getParamValue($param, $this->route[$routeMapping[$param->name]]);
-            } elseif (isset($this->body[$param->name])) {
-                $args[] = $this->getParamValue($param, $this->body[$param->name]);
-            } elseif (isset($this->query[$param->name])) {
-                $args[] = $this->getParamValue($param, $this->query[$param->name]);
+            if (!empty($routeMapping) && isset($routeMapping[$param->name]) && isset($route[$routeMapping[$param->name]]) && $route[$routeMapping[$param->name]] != '') {
+                $args[] = $this->getParamValue($param, $route[$routeMapping[$param->name]]);
+            } elseif (isset($this->requestContext->body[$param->name])) {
+                $args[] = $this->getParamValue($param, $this->requestContext->body[$param->name]);
+            } elseif (isset($this->requestContext->query[$param->name])) {
+                $args[] = $this->getParamValue($param, $this->requestContext->query[$param->name]);
             } elseif ($param->isDefaultValueAvailable()) {
                 $args[] = $param->getDefaultValue();
             } else {

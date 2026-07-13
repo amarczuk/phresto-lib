@@ -41,7 +41,7 @@ class ModelController extends Controller
         if ($this->hasNextRoute()) {
             $route = $this->getNextRoute();
 
-            return $this->escalate((!empty($this->route[0])) ? $this->route[0] : 0, $route[0]);
+            return $this->escalate((!empty($this->requestContext->route[0])) ? $this->requestContext->route[0] : 0, $route[0]);
         }
 
         $method->setAccessible(true);
@@ -59,7 +59,7 @@ class ModelController extends Controller
     {
         $routeMapping = $this->getRouteMapping($this->methodName);
 
-        return count($routeMapping) < count($this->route);
+        return count($routeMapping) < count($this->requestContext->route);
     }
 
     protected function auth($methodName, $args = null)
@@ -71,7 +71,7 @@ class ModelController extends Controller
     {
         $routeMapping = $this->getRouteMapping($this->methodName);
         $cnt = count($routeMapping);
-        $route = $this->route;
+        $route = $this->requestContext->route;
         for ($i = 0; $i < $cnt; $i++) {
             array_shift($route);
         }

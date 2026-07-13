@@ -454,7 +454,7 @@ class Model implements ModelInterface, \JsonSerializable
         return $value;
     }
 
-    public function jsonSerialize()
+    public function jsonSerialize(): mixed
     {
         $fields = $this->filterJson(array_merge($this->_properties, $this->_calculated_properties));
         foreach ($fields as $key => $value) {

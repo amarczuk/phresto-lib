@@ -20,6 +20,8 @@ class MySQLConnector extends DBConnector
             return false;
         }
 
+        $this->connection = $db;
+
         if (empty($options['names'])) {
             $db->query('SET NAMES utf8');
         } else {

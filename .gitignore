@@ -6,6 +6,9 @@
 # PHP-CS-Fixer cache
 .php-cs-fixer.cache
 
+# Integration test workspace
+.int-test/
+
 # Local Composer phar
 composer
 composer.phar

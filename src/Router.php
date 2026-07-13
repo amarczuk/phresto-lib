@@ -90,7 +90,7 @@ class Router
             }
         }
 
-        $requestContext = static::buildRequestContext($headers, $body, $bodyRaw, $query);
+        $requestContext = static::buildRequestContext($headers, $body, $bodyRaw, $query, $route);
 
         if (empty($class)) {
             if (is_array($viewConf['app'])
@@ -148,11 +148,12 @@ class Router
         array $headers,
         array $body = [],
         string $bodyRaw = '',
-        array $query = []
+        array $query = [],
+        array $route = []
     ): RequestContextInterface {
         return new RequestContext(
             mb_strtolower($_SERVER['REQUEST_METHOD'] ?? 'get'),
-            explode('/', trim($_GET['PHRESTOREQUESTPATH'] ?? '', '/')),
+            $route,
             $headers,
             $body,
             $bodyRaw,

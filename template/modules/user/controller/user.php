@@ -8,7 +8,6 @@ use Phresto\Container;
 use Phresto\CustomModelController;
 use Phresto\Exception\RequestException;
 use Phresto\Modules\AuthService;
-use Phresto\Modules\Middleware\auth;
 use Phresto\Modules\Model\profile;
 use Phresto\Response;
 
@@ -21,8 +20,6 @@ class user extends CustomModelController
     public const MODELCLASS = 'Phresto\\Modules\\Model\\user';
 
     protected $routeMapping = [ 'all' => [ 'id' => 0 ] ];
-
-    protected static $middlewares = [ auth::class ];
 
     protected function auth($methodName, $args = null)
     {
@@ -120,8 +117,13 @@ class user extends CustomModelController
 
     public function authenticate_post(string $email, string $password)
     {
-        $result = AuthService::login($email, $password, $this->headers);
-        setcookie('prsid', $result['token'], 0, '/', null, false, true);
+        try {
+            $result = AuthService::login($email, $password, $this->headers);
+        } catch (\Exception) {
+            throw new RequestException('Unauthorized', 401);
+        }
+
+        setcookie('prsid', $result['token'], 0, '/', '', false, true);
 
         return Response::json($result);
     }
@@ -132,7 +134,7 @@ class user extends CustomModelController
         if ($token) {
             AuthService::logout($token, $this->headers);
         }
-        setcookie('prsid', '', time() - 3600, '/', null, false, true);
+        setcookie('prsid', '', time() - 3600, '/', '', false, true);
 
         return Response::json([ 'ok' => true ]);
     }

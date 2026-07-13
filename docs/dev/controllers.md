@@ -74,7 +74,7 @@ protected function auth( $methodName, $args = null ) {
 }
 ```
 
-The `Controller` constructor binds `$this->body`, `$this->query`, `$this->headers`, `$this->route`, `$this->bodyRaw`, `$this->reqType`, and `$this->authContext` as references to the `RequestContext` properties, so there is no per-request copying of large request bodies or headers.
+The `Controller` constructor stores only the `RequestContext` and its `AuthContext`; there is no per-request copying of large request bodies or headers. New code should read request data directly from `$this->requestContext` (e.g. `$this->requestContext->body`, `$this->requestContext->headers`). For backward compatibility, legacy property access such as `$this->body`, `$this->query`, `$this->headers`, `$this->route`, `$this->bodyRaw`, `$this->reqType`, and `$this->authContext` is provided through `__get()`.
 
 Override for public endpoints:
 
@@ -87,17 +87,13 @@ protected function auth( $methodName, $args = null ) {
 
 ## Middleware
 
-A controller (or model) can declare per-class middleware via a static `$middlewares` property:
-
-```php
-protected static $middlewares = [ \Phresto\Modules\Middleware\auth::class ];
-```
-
-Middleware is applied by `Router` before the controller executes. It receives and returns a `RequestContext` so it can resolve users, add logging, rate-limiting, validation, etc. To apply middleware globally, register it on the router in `bootstrap.php`:
+The preferred pattern in v2 is to register middleware globally on the router in `bootstrap.php`:
 
 ```php
 Phresto\Router::addMiddleware( new \Phresto\Modules\Middleware\auth() );
 ```
+
+Middleware receives and returns a `RequestContext` so it can resolve users, add logging, rate-limiting, validation, etc. Per-class middleware can still be declared via a static `$middlewares` property, but the default user module no longer does so; the global `auth` middleware is sufficient.
 
 ## `ModelController`
 

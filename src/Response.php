@@ -21,7 +21,7 @@ class Response
         ob_clean();
 
         $conf = Config::getConfig('app');
-        if (!empty($debug) && !empty($conf['app']['debug']) && $conf['app']['debug'] === 'on') {
+        if (!empty($debug) && !empty($conf['app']['debug'])) {
             $debug = explode("\n", trim($debug));
             if (is_array($response) || is_object($response)) {
                 $response = json_decode(json_encode($response), true);
@@ -49,7 +49,7 @@ class Response
         ob_clean();
 
         $conf = Config::getConfig('app');
-        if (!empty($debug) && !empty($conf['app']['debug']) && $conf['app']['debug'] === 'on') {
+        if (!empty($debug) && !empty($conf['app']['debug'])) {
             // Debug is kept outside the YAML document as a comment.
             $debug = explode("\n", trim($debug));
             $yaml = self::toYaml($response);
