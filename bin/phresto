@@ -15,7 +15,7 @@ $functions = [
     '--install/-i [name]' => ['func' => 'install', 'desc' => 'Install module (composer package name required)'],
     '--update/-u [name]' => ['func' => 'update', 'desc' => 'Update module (composer package name required)'],
     '--modules/-m' => ['func' => 'updatemodulesini', 'desc' => 'Updates/creates config/modules.ini'],
-    '--discover/-d' => ['func' => 'discover', 'desc' => 'Rebuilds config/openapi.json API spec'],
+    '--openapi/-o' => ['func' => 'openapi', 'desc' => 'Rebuilds config/openapi.json API spec'],
     '--help/-h' => ['func' => 'help', 'desc' => 'Prints help information']
 ];
 
@@ -167,7 +167,7 @@ function updatemodulesini()
     echo "Done\n";
 }
 
-function discover()
+function openapi()
 {
     echo "Rebuilding OpenAPI spec...\n";
 

@@ -12,14 +12,12 @@ use Phresto\Response;
 /**
  * Revoked-token blacklist endpoints.
  */
-class token extends CustomModelController
+class revokedtoken extends CustomModelController
 {
     public const CLASSNAME = __CLASS__;
     public const MODELCLASS = 'Phresto\\Modules\\Model\\revokedtoken';
 
     protected $routeMapping = [ 'all' => [ 'id' => 0 ] ];
-
-    protected static $middlewares = [ auth::class ];
 
     /**
     * Delete expired revoked tokens from the database and cache.

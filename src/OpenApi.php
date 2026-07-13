@@ -90,7 +90,20 @@ class OpenApi
                 'version' => !empty($app['app']['version']) ? $app['app']['version'] : '1.0.0',
             ],
             'paths' => $paths,
-            'components' => [ 'schemas' => $schemas ],
+            'components' => [
+                'schemas' => $schemas,
+                'securitySchemes' => [
+                    'bearerAuth' => [
+                        'type' => 'http',
+                        'scheme' => 'bearer',
+                        'bearerFormat' => 'JWT',
+                        'description' => 'JWT token issued by /user/authenticate. Send as `Authorization: Bearer <token>`.',
+                    ],
+                ],
+            ],
+            'security' => [
+                [ 'bearerAuth' => [] ],
+            ],
         ];
 
         static::saveSpec($spec);
@@ -148,6 +161,16 @@ class OpenApi
                 continue;
             }
 
+            // Skip inherited REST verbs from ModelController/Controller unless
+            // the controller class has no model backing it (plain controller).
+            $declaringClass = $method->getDeclaringClass()->name;
+            if ($declaringClass !== $className
+                && in_array($info['method'], [ 'get', 'post', 'patch', 'put', 'delete', 'head' ], true)
+                && is_subclass_of($className, 'Phresto\\ModelController')
+            ) {
+                continue;
+            }
+
             $path = '/' . $name;
             if (!empty($info['segment'])) {
                 $path .= '/' . $info['segment'];
@@ -168,9 +191,13 @@ class OpenApi
                 ],
             ];
 
+            $paramNames = array_map(fn ($p) => $p->name, $params);
             $used = [];
             foreach ($mapping as $field => $index) {
                 if (is_array($index)) {
+                    continue;
+                }
+                if (!in_array($field, $paramNames, true)) {
                     continue;
                 }
                 $operation['parameters'][] = [

@@ -16,14 +16,4 @@ class CustomModelController extends ModelController
         $this->modelName = static::MODELCLASS;
         parent::__construct(static::MODELCLASS, $requestContext);
     }
-
-    protected static function getParameters($method, $className)
-    {
-        return parent::getParameters($method, static::MODELCLASS);
-    }
-
-    public static function discover($all = false, $className = null, $getRelated = true)
-    {
-        return parent::discover($all, static::MODELCLASS, $getRelated);
-    }
 }
