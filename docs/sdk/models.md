@@ -1,7 +1,5 @@
 # Defining Models
 
-> **v2 baseline** — Models are unchanged, but their metadata now feeds the OpenAPI 3.0 spec at `/openapi`. All output is JSON; use `filterJson()` to shape it.
-
 Models are the heart of Phresto. A model class describes data fields, defaults, relations, and indexes. Once a model exists, the framework automatically exposes REST endpoints for it.
 
 ## Minimal model
@@ -35,8 +33,9 @@ This immediately gives you endpoints such as:
 
 | Method | Endpoint | Behaviour |
 |--------|----------|-----------|
-| GET    | `/product` | List products |
+| GET    | `/product` | List products; accepts `where`, `order`, `limit`, `offset`, and `fields` query parameters |
 | GET    | `/product/1` | Read product 1 |
+| HEAD   | `/product` | Count products; accepts the same `where` filters as `GET` |
 | POST   | `/product` | Create a product |
 | PATCH  | `/product/1` | Update product 1 |
 | DELETE | `/product/1` | Delete product 1 |
@@ -176,6 +175,8 @@ $product = product::findOne([
 
 $count = product::count(['where' => ['in_stock' => true]]);
 ```
+
+The same query object can be sent from the URL query string. See [`query-language.md`](query-language.md) for the full syntax.
 
 ## Schema updates
 

@@ -1,7 +1,5 @@
 # Configuration System
 
-> **v2 baseline** — `config/view.ini`, per-module view INI files, and `modules/user/config/social.ini` have been removed. A new cached file, `config/openapi.json`, is generated automatically.
-
 Phresto stores configuration in INI files. The `Config` class reads, caches, merges, and writes these files.
 
 ## File locations

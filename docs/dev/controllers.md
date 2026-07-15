@@ -1,10 +1,8 @@
 # Controllers
 
-> **v2 baseline** — Controllers return JSON through `Response::json()`. The old `View` HTML layer and `LAN_HTTP_*` language constants are gone. `discover_get()` now returns an OpenAPI fragment.
+All custom controllers extend `Phresto\Controller`. Controllers return data through `Response::json()`, which produces a response array that `bootstrap.php` turns into a JSON response.
 
 ## Base `Controller`
-
-All custom controllers extend `Phresto\Controller`.
 
 ```php
 <?php
@@ -42,9 +40,37 @@ return Response::json( [ 'error' => 'Bad input' ], 400 );
 
 Plain strings, arrays, and objects are still accepted by `bootstrap.php`, but `Response::json()` is the intended path.
 
-## Parameter binding
+Controllers that serve non-JSON content can return a custom response array with `body` and `content-type` keys. The Swagger UI controller in the `swagger` module does this to serve HTML and static assets.
 
-Same as before:
+## Request data
+
+The controller constructor receives a `RequestContext`. The context is the single source of truth for request data:
+
+| Property | Meaning |
+|----------|---------|
+| `$this->requestContext->method` | HTTP method, lowercased |
+| `$this->requestContext->route` | Remaining URL segments after the controller name |
+| `$this->requestContext->headers` | Request headers |
+| `$this->requestContext->body` | Decoded JSON body |
+| `$this->requestContext->bodyRaw` | Raw request body |
+| `$this->requestContext->query` | Query string array |
+| `$this->requestContext->authContext` | `AuthContext` resolved by middleware |
+
+For backward compatibility, legacy property access is provided through `__get()`:
+
+```php
+$this->reqType;  // $this->requestContext->method
+$this->route;     // $this->requestContext->route
+$this->headers;   // $this->requestContext->headers
+$this->body;      // $this->requestContext->body
+$this->query;     // $this->requestContext->query
+$this->bodyRaw;   // $this->requestContext->bodyRaw
+$this->authContext; // $this->requestContext->authContext
+```
+
+New code should read directly from `$this->requestContext`.
+
+## Parameter binding
 
 ```php
 public function search_get( string $q, int $limit = 10 ) {
@@ -64,17 +90,17 @@ public function search_get( string $q, int $limit ) {
 }
 ```
 
+Only parameters actually declared on the method are published as path parameters in the OpenAPI spec.
+
 ## Auth
 
-Controllers receive a `RequestContext` built by Router middleware instead of a loaded user model. The `RequestContext` carries the parsed request data plus an `AuthContext`; the default `auth()` checks permissions carried in that auth context:
+The default `auth()` checks permissions carried in the request's `AuthContext`:
 
 ```php
 protected function auth( $methodName, $args = null ) {
     return $this->authContext->hasAccess( static::CLASSNAME, $methodName );
 }
 ```
-
-The `Controller` constructor stores only the `RequestContext` and its `AuthContext`; there is no per-request copying of large request bodies or headers. New code should read request data directly from `$this->requestContext` (e.g. `$this->requestContext->body`, `$this->requestContext->headers`). For backward compatibility, legacy property access such as `$this->body`, `$this->query`, `$this->headers`, `$this->route`, `$this->bodyRaw`, `$this->reqType`, and `$this->authContext` is provided through `__get()`.
 
 Override for public endpoints:
 
@@ -87,29 +113,32 @@ protected function auth( $methodName, $args = null ) {
 
 ## Middleware
 
-The preferred pattern in v2 is to register middleware globally on the router in `bootstrap.php`:
+The preferred pattern is to register middleware globally on the router in `bootstrap.php`:
 
 ```php
 Phresto\Router::addMiddleware( new \Phresto\Modules\Middleware\auth() );
 ```
 
-Middleware receives and returns a `RequestContext` so it can resolve users, add logging, rate-limiting, validation, etc. Per-class middleware can still be declared via a static `$middlewares` property, but the default user module no longer does so; the global `auth` middleware is sufficient.
+Middleware receives and returns a `RequestContext`, so it can resolve users, add logging, rate-limiting, validation, etc. Per-class middleware can still be declared via a static `$middlewares` property, but the global `auth` middleware is normally sufficient.
 
 ## `ModelController`
 
-Framework-owned. Maps HTTP verbs to CRUD. It now uses `Response::json()` and plain text error messages (no language constants). The constructor accepts a `RequestContext`:
+Framework-owned controller that maps HTTP verbs to CRUD:
 
-```php
-public function __construct(
-    $modelName,
-    ?RequestContext $requestContext = null,
-    ?Model $contextModel = null
-)
-```
+| HTTP verb | Method | Purpose |
+|-----------|--------|---------|
+| HEAD | `head($id = null)` | Count records or check existence |
+| GET | `get($id = null)` | Read one, list, or read related |
+| POST | `post()` | Create |
+| PATCH | `patch($id = null)` | Partial update |
+| PUT | `put($id = null)` | Upsert |
+| DELETE | `delete($id = null)` | Delete |
+
+The constructor accepts a model name, an optional `RequestContext`, and an optional parent `Model` for related-resource escalation.
 
 ## `CustomModelController`
 
-User extension point for model REST endpoints:
+User extension point for model REST endpoints. Extending it keeps all generic model REST methods and lets you add custom ones:
 
 ```php
 <?php
@@ -126,7 +155,3 @@ class product extends CustomModelController {
     }
 }
 ```
-
-## Discovery
-
-`Controller::discover_get()` now returns an OpenAPI path-item fragment via `OpenApi::discoverClass(static::CLASSNAME)`. The full spec is available at `GET /openapi`.

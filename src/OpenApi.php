@@ -5,11 +5,10 @@ declare(strict_types=1);
 namespace Phresto;
 
 /**
- * OpenAPI 3.0 spec generator for Phresto v2.
+ * OpenAPI 3.0 spec generator for Phresto.
  *
- * v2 replaces the old reflection-based Explorer UI with a cached machine-readable
- * API specification. The spec is rebuilt automatically in dev mode and can be
- * refreshed manually via `vendor/bin/phresto -d`.
+ * The spec is rebuilt automatically in dev mode and can be refreshed manually
+ * via `vendor/bin/phresto -o`.
  */
 class OpenApi
 {
@@ -282,10 +281,12 @@ class OpenApi
             ],
         ];
 
+        $queryParams = static::modelQueryParams();
+
         $paths = [
             '/' . $name => [
-                'get' => static::makeOperation('List ' . $name, [ '200' => [ 'description' => 'List of ' . $name, 'content' => [ 'application/json' => [ 'schema' => [ 'type' => 'array', 'items' => [ '$ref' => '#/components/schemas/' . $schemaName ] ] ] ] ] ]),
-                'head' => static::makeOperation('Count ' . $name, [ '200' => [ 'description' => 'Count returned in X-Count header' ] ]),
+                'get' => static::makeOperation('List ' . $name, [ '200' => [ 'description' => 'List of ' . $name, 'content' => [ 'application/json' => [ 'schema' => [ 'type' => 'array', 'items' => [ '$ref' => '#/components/schemas/' . $schemaName ] ] ] ] ] ], null, [], $queryParams),
+                'head' => static::makeOperation('Count ' . $name, [ '200' => [ 'description' => 'Count returned in X-Count header' ] ], null, [], $queryParams),
                 'post' => static::makeOperation('Create ' . $name, [ '201' => [ 'description' => 'Created ' . $name ] ], $schemaName),
             ],
             '/' . $name . '/{id}' => [
@@ -307,7 +308,8 @@ class OpenApi
                     'List related ' . $relName,
                     [ '200' => [ 'description' => 'List of ' . $relName, 'content' => [ 'application/json' => [ 'schema' => [ 'type' => 'array', 'items' => [ '$ref' => '#/components/schemas/' . $relSchema ] ] ] ] ] ],
                     null,
-                    [ 'id' ]
+                    [ 'id' ],
+                    $queryParams
                 );
             }
             if (in_array('post', $allowed)) {
@@ -323,7 +325,7 @@ class OpenApi
         return [ 'paths' => $paths, 'schemas' => $schemas ];
     }
 
-    protected static function makeOperation($summary, $responses, $schemaName = null, $pathParams = [])
+    protected static function makeOperation($summary, $responses, $schemaName = null, $pathParams = [], $queryParams = [])
     {
         $operation = [
             'summary' => $summary,
@@ -337,6 +339,35 @@ class OpenApi
                 'in' => 'path',
                 'required' => true,
                 'schema' => [ 'type' => 'string' ],
+            ];
+        }
+
+        foreach ($queryParams as $name => $type) {
+            if (is_array($type)) {
+                $schema = $type;
+                $description = $type['description'] ?? 'Filter by ' . $name;
+                unset($schema['description'], $schema['style'], $schema['explode']);
+                $param = [
+                    'name' => $name,
+                    'in' => 'query',
+                    'schema' => $schema,
+                    'description' => $description,
+                ];
+                if (isset($type['style'])) {
+                    $param['style'] = $type['style'];
+                }
+                if (isset($type['explode'])) {
+                    $param['explode'] = $type['explode'];
+                }
+                $operation['parameters'][] = $param;
+                continue;
+            }
+
+            $operation['parameters'][] = [
+                'name' => $name,
+                'in' => 'query',
+                'schema' => static::phpTypeToSchema($type),
+                'description' => 'Filter by ' . $name,
             ];
         }
 
@@ -382,6 +413,33 @@ class OpenApi
         }
 
         return [];
+    }
+
+    protected static function modelQueryParams(): array
+    {
+        return [
+            'where' => [ 'type' => 'object', 'style' => 'deepObject', 'explode' => true, 'description' => 'Phresto query filters (e.g. where[name]=foo&where[price][<=]=100).' ],
+            'order' => 'string',
+            'limit' => 'int',
+            'offset' => 'int',
+            'fields' => 'string',
+        ];
+    }
+
+    protected static function modelQueryParamsFromFields(array $fields, array $calculated): array
+    {
+        $params = [];
+        foreach ($fields as $field => $type) {
+            if (in_array($field, [ 'id', 'created', 'modified' ], true)) {
+                continue;
+            }
+            $params[$field] = is_array($type) ? $type['type'] : $type;
+        }
+        foreach ($calculated as $field => $type) {
+            $params[$field] = $type;
+        }
+
+        return $params;
     }
 
     protected static function allowedRelationMethods($type)

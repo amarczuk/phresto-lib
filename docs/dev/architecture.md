@@ -1,12 +1,12 @@
 # Architecture
 
-> **v2 baseline** — HTML templating and the Admin/Explorer UI are gone. Responses are JSON-only (YAML only for the OpenAPI spec). Discovery is now handled by `src/OpenApi.php` and served at `/openapi`.
+Phresto is a JSON-only REST framework. Discovery is generated as a cached OpenAPI 3.0 spec by `src/OpenApi.php` and served at `/openapi`.
 
 ## Request lifecycle
 
 1. **Web server** rewrites everything to `template/bootstrap.php` (see [`.htaccess`](../../template/.htaccess)).
 2. **`bootstrap.php`** registers the autoloader, calls `Router::route()`, and emits a JSON response envelope.
-3. **`Router::route()`** parses the URL, resolves the controller, runs it, and returns a response array.
+3. **`Router::route()`** parses the URL, builds a `RequestContext`, runs middleware, resolves the controller, runs it, and returns a response array.
 4. **`Controller`** binds parameters, checks permissions, executes the method, and returns `Response::json(...)`.
 5. **`bootstrap.php`** sets `http_response_code()`, sends `Content-Type: application/json`, and writes the body.
 
@@ -14,7 +14,7 @@
 HTTP request
     -> .htaccess -> bootstrap.php
         -> Router::route()
-            -> Controller/ModelController
+            -> middleware -> Controller/ModelController
                 -> Response::json()
     -> JSON response
 ```
@@ -25,9 +25,11 @@ HTTP request
 
 `Router::route()` is the only entry point. It:
 
-- Parses the request method, path segments, query string, body, and headers.
+- Parses the request method, path segments, query string, body, raw body, and headers.
 - Loads `config/modules.ini`.
 - Determines if the first URL segment is a model (`modules/<x>/model/`) or a custom controller (`modules/<x>/controller/`).
+- Builds a `RequestContext` with a base `AuthContext`.
+- Runs the global middleware stack.
 - Instantiates the right controller through `Container`.
 - Runs `exec()` and returns the response array.
 
@@ -35,19 +37,20 @@ Special routes:
 
 - `GET /openapi` — returns the cached OpenAPI 3.0 spec as JSON.
 - `GET /openapi?format=yaml` — returns the same spec as YAML.
+- `GET /swagger` — serves Swagger UI when the `swagger` module and the `swagger-api/swagger-ui` package are installed.
 
 ### `Controller` (`src/Controller.php`)
 
 Base class for all custom controllers. Responsibilities:
 
-- Stores request context: `$reqType`, `$route`, `$body`, `$query`, `$headers`, all read from a `RequestContext`.
-- Receives a `RequestContext` from `Router` middleware; the `RequestContext` contains the parsed request data and an `AuthContext` resolved from the `Authorization` header.
+- Receives a `RequestContext` from `Router` middleware; the context contains parsed request data and an `AuthContext` resolved from the `Authorization` header.
+- Stores the `RequestContext` and its `AuthContext`. Legacy property access (`$this->body`, `$this->query`, `$this->headers`, `$this->route`, `$this->bodyRaw`, `$this->reqType`) is provided through `__get()` for backward compatibility.
 - Uses reflection to find the method matching the URL (`getMethod()`).
 - Binds method parameters from URL segments, body JSON, or query string.
 - Calls `auth($methodName, $args)` before executing a method.
 - Returns `Response::json($data)`.
 
-The `discover_get()` method now returns a fragment of the OpenAPI spec for the current controller via `OpenApi::discoverClass()`.
+The controller does not contain any discovery endpoints; the whole API description is at `/openapi`.
 
 ### `ModelController` (`src/ModelController.php`)
 
@@ -55,14 +58,14 @@ Framework-owned controller that exposes REST endpoints for any model. It maps HT
 
 | HTTP verb | Method | Purpose |
 |-----------|--------|---------|
-| HEAD | `head($id)` | existence / count |
-| GET | `get($id)` | read one, list, or read related |
+| HEAD | `head($id = null)` | count records or check existence |
+| GET | `get($id = null)` | read one, list, or read related |
 | POST | `post()` | create |
-| PATCH | `patch($id)` | partial update |
-| PUT | `put($id)` | upsert |
-| DELETE | `delete($id)` | delete |
+| PATCH | `patch($id = null)` | partial update |
+| PUT | `put($id = null)` | upsert |
+| DELETE | `delete($id = null)` | delete |
 
-When the URL escalates into a related model (`/product/5/reviews`), `ModelController` loads the parent model, validates the relation, and creates a new `ModelController` for the child.
+When the URL escalates into a related model (`/product/5/reviews`), `ModelController` loads the parent model, validates the relation, and creates a new `ModelController` for the child with a trimmed `RequestContext`.
 
 ### `CustomModelController` (`src/CustomModelController.php`)
 
@@ -70,14 +73,16 @@ User extension point. Extending it keeps all generic model REST endpoints while 
 
 ### `Response` (`src/Response.php`)
 
-Replaces the old `View` layer. Two public methods:
+JSON and YAML response helpers:
 
 ```php
-Response::json( $data, $code = 200 );   // returns response array with application/json
-Response::yaml( $data, $code = 200 );   // returns response array with application/yaml
+Response::json( $data, $code = 200 );   // response array with application/json
+Response::yaml( $data, $code = 200 );   // response array with application/yaml
 ```
 
 When `config/app.ini` has `debug=on`, captured `ob_*` output is appended under a `_debug` key in JSON responses. In production, debug output is discarded.
+
+Controllers may also return a plain response array with `body` and `content-type` keys to serve non-JSON content, as the Swagger UI controller does.
 
 ### `OpenApi` (`src/OpenApi.php`)
 
@@ -90,7 +95,9 @@ OpenApi::discoverClass( $className );
 OpenApi::discoverModel( $modelName );
 ```
 
-The spec is rebuilt automatically in development (`env=dev`) when `Utils::registerAutoload()` runs. In production it is only rebuilt by running `vendor/bin/phresto -d` or `vendor/bin/phresto -m`.
+The spec includes security metadata (`bearerAuth` JWT security scheme), sorts paths alphabetically, and documents `HEAD` collection endpoints as record counts. It is rebuilt automatically in development (`env=dev`) when `Utils::registerAutoload()` runs. In production it is only rebuilt by running `vendor/bin/phresto -o` or `vendor/bin/phresto -m`.
+
+`GET /swagger` serves Swagger UI when the `swagger` module and the `swagger-api/swagger-ui` Composer package are installed.
 
 ### `Utils` (`src/Utils.php`)
 
@@ -101,12 +108,3 @@ The spec is rebuilt automatically in development (`env=dev`) when `Utils::regist
 ### `Model` / `MySQLModel`
 
 See [`models.md`](models.md) and [`database.md`](database.md).
-
-## Removed in v2
-
-- `src/View.php` and the HTML templating pipeline.
-- `template/view/`, `template/lang/`, `template/bower.json`, `template/.bowerrc`, `template/static/index.html`.
-- `template/modules/admin/` and `template/modules/explorer/`.
-- Old social OAuth adapters in `template/modules/user/class/`, `template/modules/user/view/`, `template/modules/user/config/social.ini`.
-- Database-stored session tokens; replaced by stateless JWTs and a revocation blacklist.
-- `lusitanian/oauth` Composer dependency.

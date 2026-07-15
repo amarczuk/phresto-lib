@@ -1,7 +1,5 @@
 # CLI Commands
 
-> **v2 baseline** — Bower support has been removed. A new `-d`/`--discover` option rebuilds the OpenAPI spec.
-
 Phresto provides a small CLI at `vendor/bin/phresto` (also copied into `bin/phresto` in older setups). It must be run from the project root.
 
 ## Available options
@@ -12,7 +10,7 @@ vendor/bin/phresto -up       # --upgrade Update the framework and built-in modul
 vendor/bin/phresto -i name   # --install Install a module (composer package)
 vendor/bin/phresto -u name   # --update  Update a module (composer package)
 vendor/bin/phresto -m        # --modules Update config/modules.ini and rebuild OpenAPI spec
-vendor/bin/phresto -d        # --discover Rebuild config/openapi.json only
+vendor/bin/phresto -o        # --openapi Rebuild config/openapi.json only
 vendor/bin/phresto -h        # --help    Show help
 ```
 
@@ -25,7 +23,7 @@ composer require phresto/phresto
 vendor/bin/phresto -n
 ```
 
-The CLI copies the `template/` directory into the current folder and prompts for a database connection. There is no frontend asset installation anymore.
+The CLI copies the `template/` directory into the current folder and prompts for a database connection. There is no frontend asset installation.
 
 ## Upgrade an existing project
 
@@ -56,12 +54,12 @@ vendor/bin/phresto -m
 
 This also rebuilds `config/openapi.json`. In `env=dev` this happens automatically on every request, but it is good practice to refresh it after deploying to production.
 
-The registry now also scans `modules/<module>/middleware/` for middleware classes.
+The registry also scans `modules/<module>/middleware/` for middleware classes.
 
 ## Rebuild the OpenAPI spec only
 
 ```bash
-vendor/bin/phresto -d
+vendor/bin/phresto -o
 ```
 
 Use this when you want to update the cached spec without regenerating `config/modules.ini`.

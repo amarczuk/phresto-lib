@@ -1,7 +1,5 @@
 # Creating Controllers
 
-> **v2 baseline** — Controllers return JSON through `Response::json()`. HTML views and `$this->jsonResponse()` are gone.
-
 When a model's generic CRUD endpoints are not enough, create a controller class to add custom endpoints and logic.
 
 ## Basic controller
@@ -72,7 +70,21 @@ return Response::json( $data, 201 );
 return Response::json( ['error' => 'Bad request'], 400 );
 ```
 
-There is no HTML view path anymore.
+## Request data
+
+The controller stores a `RequestContext` in `$this->requestContext`. Read request data from it directly:
+
+```php
+$this->requestContext->method;   // HTTP method
+$this->requestContext->route;    // remaining URL segments
+$this->requestContext->headers;   // request headers
+$this->requestContext->body;      // decoded JSON body
+$this->requestContext->query;     // query string array
+$this->requestContext->bodyRaw;   // raw request body
+$this->requestContext->authContext; // resolved auth context
+```
+
+For backward compatibility, legacy properties such as `$this->body`, `$this->query`, `$this->headers`, `$this->route`, `$this->bodyRaw`, `$this->reqType`, and `$this->authContext` are mapped through `__get()`.
 
 ## Custom model controller
 
@@ -119,4 +131,4 @@ protected function auth( $methodName, $args = null ) {
 
 ## Discovery
 
-Every controller still answers `GET /<name>/discover`, but the response is now an OpenAPI path-item fragment. The full spec is at `GET /openapi`.
+The full API description is available as an OpenAPI 3.0 spec at `GET /openapi` and as interactive Swagger UI at `GET /swagger` when enabled.

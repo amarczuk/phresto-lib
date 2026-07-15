@@ -1,6 +1,6 @@
 # Routing
 
-> **v2 baseline** — Routing is unchanged, but every successful response is now JSON and discovery is served as a cached OpenAPI 3.0 spec at `/openapi`.
+`Router` is the single entry point for all HTTP traffic. It maps URL segments to `Phresto\Modules\Controller\...` or `Phresto\ModelController` instances, builds a `RequestContext`, runs middleware, and dispatches to the resolved controller.
 
 ## URL-to-class mapping
 
@@ -10,9 +10,13 @@ Given a request:
 GET /product/5/reviews
 ```
 
-`Router` decides the first segment is a model because `modules/product/model/product.php` exists. It instantiates `Phresto\ModelController` with `$modelName = 'Phresto\\Modules\\Model\\product'` and a `RequestContext`.
+`Router` checks `config/modules.ini` and the file system:
 
-If the first segment matched a custom controller file (`modules/<x>/controller/<x>.php`), it would instantiate `Phresto\Modules\Controller\x` with a `RequestContext`.
+1. If `modules/<x>/controller/<x>.php` exists, it instantiates `Phresto\Modules\Controller\x`.
+2. If `modules/<x>/model/<x>.php` exists, it instantiates `Phresto\ModelController` with `$modelName = 'Phresto\\Modules\\Model\\product'`.
+3. Otherwise it returns 404.
+
+The first matching segment wins. Controller files take precedence over model files.
 
 ## Method resolution
 
@@ -38,6 +42,8 @@ GET /report
 public function get() { ... }
 ```
 
+The matched method must be `public` or `protected`. Private methods are never routed.
+
 ## Parameter binding
 
 `getParamValue()` fills method parameters from three sources, in order:
@@ -52,39 +58,46 @@ public function get() { ... }
 protected $routeMapping = [ 'all' => [ 'id' => 0 ] ];
 ```
 
-This means `id` comes from `$route[0]` for every method (`all`).
+This means `id` comes from the first remaining route segment for every method (`all`). Per-method mappings override `all`:
+
+```php
+protected $routeMapping = [
+    'all'       => [ 'id' => 0 ],
+    'sales_get' => [ 'year' => 0 ],
+];
+```
+
+Only parameters actually declared on the method are published as path parameters in the OpenAPI spec.
 
 ## Special routes
 
 ### `GET /openapi`
 
-Returns the cached OpenAPI 3.0 specification as JSON:
-
-```json
-{
-  "openapi": "3.0.0",
-  "info": { ... },
-  "paths": { ... }
-}
-```
+Returns the cached OpenAPI 3.0 spec as JSON.
 
 ### `GET /openapi?format=yaml`
 
-Returns the same specification as YAML.
+Returns the same spec as YAML.
 
-### `GET /<controller>/discover`
+### `GET /swagger`
 
-Still works, but now returns the OpenAPI fragment for that controller via `OpenApi::discoverClass()` instead of the old custom JSON discovery format.
+If the `swagger-api/swagger-ui` Composer package is installed and the `swagger` module is enabled, this serves an interactive Swagger UI that loads `/openapi`.
 
 ## Middleware
 
-`Router` builds a `RequestContext` from the HTTP request (method, route, headers, body, query) and a base `AuthContext`, then applies middleware before invoking the controller. The preferred v2 pattern is a single global middleware stack registered with `Router::addMiddleware()` in `bootstrap.php`. Per-class middleware can still be declared via a static `$middlewares` property, but the default user module relies on the global `auth` middleware instead.
+`Router::route()` builds a `RequestContext` from the HTTP request (method, trimmed route, headers, body, raw body, query) and a base `AuthContext`, then runs the global middleware stack. The preferred pattern is a single global middleware registered in `bootstrap.php`:
 
-Each middleware receives the current `RequestContext` and returns a (possibly modified) `RequestContext`. Authentication middleware updates the wrapped `AuthContext` via `$context->withAuthContext(...)`. Route escalation uses `$context->withRoute(...)` to pass a trimmed route to the child controller. The final context is passed to the controller constructor. This keeps authentication out of controllers and models and makes middleware reusable for logging, validation, rate limiting, etc.
+```php
+Phresto\Router::addMiddleware( new \Phresto\Modules\Middleware\auth() );
+```
+
+Each middleware receives the current `RequestContext` and returns a (possibly modified) `RequestContext`. Authentication middleware updates the wrapped `AuthContext` via `$context->withAuthContext(...)`. Route escalation uses `$context->withRoute(...)` to pass a trimmed route to a child controller. The final context is passed to the controller constructor.
+
+Per-class middleware can still be declared via a static `$middlewares` property, but global middleware is preferred because it keeps authentication, logging, rate limiting, and validation out of individual controllers.
 
 ## Error responses
 
-The bootstrap catches `RequestException` and generic `Exception` and returns JSON with the corresponding HTTP code:
+`bootstrap.php` catches `RequestException` and generic `Exception` and returns JSON with the corresponding HTTP code:
 
 ```json
 {
@@ -93,4 +106,4 @@ The bootstrap catches `RequestException` and generic `Exception` and returns JSO
 }
 ```
 
-All errors are JSON; there is no HTML error page anymore.
+All responses are JSON; there is no HTML error page.

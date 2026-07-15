@@ -1,7 +1,5 @@
 # Routing and Endpoints
 
-> **v2 baseline** — Routing is unchanged, but every response is JSON and the OpenAPI 3.0 spec is available at `/openapi`.
-
 Phresto does not use a central route file. URLs map to classes and methods by naming convention.
 
 ## URL format
@@ -19,17 +17,17 @@ POST   /product              # create product
 PATCH  /product/12           # update product 12
 DELETE /product/12           # delete product 12
 GET    /product/12/reviews   # list reviews of product 12
-POST   /product/12/reviews  # create review for product 12
+POST   /product/12/reviews   # create review for product 12
 GET    /report/sales         # custom controller method
 ```
 
 ## Resolution order
 
-1. If a controller class `Phresto\Modules\Controller\&lt;name&gt;` exists, use it.
-2. If a model class `Phresto\Modules\Model\&lt;name&gt;` exists, wrap it in `ModelController`.
+1. If a controller class `Phresto\Modules\Controller\<name>` exists, use it.
+2. If a model class `Phresto\Modules\Model\<name>` exists, wrap it in `ModelController`.
 3. Otherwise return 404.
 
-The empty root path (`/`) no longer serves `static/index.html`; it returns a JSON 404 unless you add a custom controller.
+The empty root path (`/`) returns a JSON 404 unless you add a custom controller.
 
 ## HTTP verbs
 
@@ -57,8 +55,8 @@ Declare `$routeMapping` in the controller to bind path positions to method param
 
 ```php
 protected $routeMapping = [
-    'all'      => [ 'id' => 0 ],          // applies to every method
-    'sales_get' => [ 'year' => 0 ],      // only for sales_get
+    'all'       => [ 'id' => 0 ],  // applies to every method
+    'sales_get' => [ 'year' => 0 ], // only for sales_get
 ];
 ```
 
@@ -101,12 +99,12 @@ Use `*` to allow any origin, or set a specific origin domain. Preflight `OPTIONS
 
 ## Discovery and the OpenAPI spec
 
-The old per-endpoint `GET /<name>/discover` format has been replaced by a single OpenAPI 3.0 specification:
+A single OpenAPI 3.0 specification describes the whole API:
 
 ```
-GET /openapi            # JSON spec
+GET /openapi             # JSON spec
 GET /openapi?format=yaml # YAML spec
-GET /product/discover   # OpenAPI fragment for the product endpoints
+GET /swagger             # Swagger UI (if enabled)
 ```
 
 Use the spec with Swagger UI, Postman, or any OpenAPI-compatible tool to explore and test the API.

@@ -1,15 +1,13 @@
 # Authentication and Permissions
 
-> **v2 baseline** — OAuth/social login has been removed. Authentication is now JWT-based and stateless.
-
-Phresto ships with a `user` module that provides authentication and role-based access control. You can replace it or extend it for your own needs.
+Phresto ships with a `user` module that provides JWT-based authentication and role-based access control. You can replace it or extend it for your own needs.
 
 ## How authentication works
 
 - Passwords are hashed with PHP's native `password_hash()` / `password_verify()`.
 - Successful login returns a signed **JWT** (HS256) containing the user id, profile, status and a snapshot of the user's permissions.
 - The token can be sent as a `Bearer` `Authorization` header or stored in the `prsid` cookie.
-- The framework resolves the token into a `RequestContext` via middleware, **not** by loading the user model on every request. The `RequestContext` contains the parsed request data and an `AuthContext`.
+- The framework resolves the token into a `RequestContext` via middleware. The `RequestContext` contains the parsed request data and an `AuthContext`.
 - The database only stores revoked token ids. A file cache sits in front of the revocation list so authentication checks usually require zero DB queries.
 - If a user's permissions change, existing tokens still carry the old permissions until they expire or are revoked. The user must re-authenticate to pick up new access rights.
 
@@ -51,7 +49,7 @@ If no permission matches, the default is to deny. You must seed at least one per
 
 ## Seeding the initial setup
 
-The bundled migration `migration/initial_user_setup.php` creates the `visitor`, `user` and `admin` profiles, grants appropriate permissions, and creates an admin user:
+The bundled migration creates the `visitor`, `user` and `admin` profiles, grants appropriate permissions, and creates an admin user:
 
 ```bash
 php scripts/run_migrations.php
@@ -71,9 +69,9 @@ Allow visitors to read products:
 ```php
 $permission = new \Phresto\Modules\Model\permission();
 $permission->profile = $visitorProfileId;
-$permission->route   = 'product';
-$permission->method  = 'get';
-$permission->allow  = true;
+$permission->route     = 'product';
+$permission->method    = 'get';
+$permission->allow     = true;
 $permission->save();
 ```
 
@@ -123,7 +121,7 @@ curl -X POST \
   /user/logout
 ```
 
-This revokes the JWT. Revoked tokens are kept in the database and cached; expired revocations can be cleaned with `GET /token/clean`.
+This revokes the JWT. Revoked tokens are kept in the database and cached; expired revocations can be cleaned with `GET /revokedtoken/clean`.
 
 ## Token client binding
 

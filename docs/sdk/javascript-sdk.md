@@ -1,7 +1,5 @@
 # JavaScript SDK
 
-> **v2 baseline** — `phresto.js` is still available, but there is no bundled Explorer/Admin UI anymore. The helper is a thin Promise-based client for the JSON API.
-
 Phresto includes a small browser helper at `static/js/phresto.js` for consuming the JSON API from the frontend.
 
 ## Loading
@@ -113,8 +111,10 @@ It uses `XMLHttpRequest` and wraps it in a Promise. `DateTime` fields are return
 
 ## Discovering endpoints
 
-Because there is no built-in Explorer UI anymore, use the OpenAPI spec with Swagger UI or import it into Postman:
+Use the OpenAPI spec with Swagger UI or import it into Postman:
 
 ```bash
 curl http://localhost:8000/openapi
 ```
+
+If the Swagger UI module is enabled, open `http://localhost:8000/swagger` for interactive documentation.

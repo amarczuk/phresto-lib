@@ -1,6 +1,6 @@
 # Module System and Autoloading
 
-> **v2 baseline** — Modules no longer contain `view/` or `lang/` directories. The module scan also triggers an OpenAPI spec rebuild in development mode.
+Phresto projects are organized into modules. Each module lives under `modules/<module>/` and can contain controllers, models, middleware, classes, config overrides, and static assets. The module scan also triggers an OpenAPI spec rebuild in development mode.
 
 ## Module directory structure
 
@@ -52,4 +52,4 @@ The command runs `composer install vendor/package` and copies `vendor/vendor/pac
 
 ## Development mode
 
-When `config/app.ini` contains `env=dev`, `Utils::registerAutoload()` deletes and regenerates `config/modules.ini` on every request. In v2 it also rebuilds `config/openapi.json` in dev mode. In production both registries are only rebuilt when explicitly triggered (e.g. by running `Utils::updateModules()` / `OpenApi::buildSpec()` or `vendor/bin/phresto -m` / `vendor/bin/phresto -d`).
+When `config/app.ini` contains `env=dev`, `Utils::registerAutoload()` deletes and regenerates `config/modules.ini` on every request. It also rebuilds `config/openapi.json` in dev mode. In production both registries are only rebuilt when explicitly triggered (e.g. by running `Utils::updateModules()` / `OpenApi::buildSpec()` or `vendor/bin/phresto -m` / `vendor/bin/phresto -o`).

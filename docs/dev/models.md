@@ -1,7 +1,5 @@
 # Models
 
-> **v2 baseline** — The model layer is unchanged, but its metadata is now used by `OpenApi` to build the API specification. `filterJson()` is the primary way to shape JSON output because there is no HTML view layer anymore.
-
 ## Base `Model` (`src/Model.php`)
 
 A model is a PHP class extending `Phresto\Model` (or `Phresto\MySQLModel`) with static metadata describing its shape.

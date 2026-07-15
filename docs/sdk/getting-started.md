@@ -1,7 +1,5 @@
 # Getting Started
 
-> **v2 baseline** — Phresto is now a JSON-only REST API framework. The bundled Explorer/Admin UIs, HTML templates, Bower setup, and language files are gone. Discovery is served as an OpenAPI 3.0 spec at `/openapi`.
-
 Phresto is a PHP REST framework that turns models and controllers into HTTP endpoints by convention. This guide shows how to create a new project and make your first API call.
 
 ## Requirements
@@ -34,8 +32,6 @@ scripts/
 bootstrap.php
 .htaccess
 ```
-
-There is no `view/`, `lang/`, or `config/view.ini` anymore.
 
 ## Configure the database
 
@@ -115,6 +111,8 @@ Or inspect the OpenAPI spec:
 curl http://localhost:8000/openapi
 curl "http://localhost:8000/openapi?format=yaml"
 ```
+
+If you installed the optional Swagger UI module, open `http://localhost:8000/swagger` for interactive documentation.
 
 ## Typical workflow
 
