@@ -111,8 +111,18 @@ Relation types:
 
 - `1:n` — one product has many reviews
 - `n:1` — many products belong to one category
-- `1:1` / `1>1` / `1<1` — one-to-one variants
+- `1:1` / `1>1` / `1<1` — one-to-one variants. The arrow indicates which side owns the foreign key:
+  - `1>1` — the related model has the FK (`related_table.this_id` → `this_table.id`).
+  - `1<1` — the current model has the FK (`this_table.related_id` → `related_table.id`).
+  - `1:1` — generic one-to-one with no FK preference.
 - `n:n` — many-to-many (requires a `junction` table definition)
+
+### Creating related records through REST
+
+REST routes for related models are generated from `$_relations`. The framework allows `POST /{parent}/{id}/{related}` unless the relation type makes that creation impossible:
+
+- `1:n` and `1>1` — `POST /parent/{id}/child` is rejected. The foreign key lives on the parent/context side, so a request coming from the child route cannot set it correctly.
+- `n:1`, `1:1`, `1<1`, `n:n` — nested creation is allowed (for `n:n` you must implement the junction insert logic yourself).
 
 With the relations above, these endpoints become available:
 

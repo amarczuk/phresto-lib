@@ -64,10 +64,35 @@ Relation types used by the framework:
 
 - `1:n` — one parent, many children
 - `n:1` — many children point to one parent
-- `1:1`, `1>1`, `1<1` — one-to-one variants
-- `n:n` — many-to-many (requires `junction` array; MySQLModel currently leaves the SQL stub empty)
+- `1:1`, `1>1`, `1<1` — one-to-one variants. The arrow indicates which side owns the foreign key:
+  - `1>1` — the related model has the FK (`related_table.this_id` → `this_table.id`).
+  - `1<1` — the current model has the FK (`this_table.related_id` → `related_table.id`).
+  - `1:1` — generic one-to-one with no FK preference.
+- `n:n` — many-to-many (requires `junction` array)
 
 Optional keys: `dbactions` (referential actions), `junction` (for `n:n`), `skipfk` (skip foreign key generation).
+
+#### `n:n` relations
+
+```php
+protected static $_relations = [
+    'tag' => [
+        'type' => 'n:n',
+        'model' => 'tag',
+        'field' => 'id',
+        'index' => 'id',
+        'junction' => [
+            'collection' => 'post_tag', // junction table name
+            'field' => 'tag_id',        // FK to related model in junction table
+            'index' => 'post_id',        // FK to this model in junction table
+        ],
+    ],
+];
+```
+
+If `junction` is omitted, `MySQLModel` auto-generates a junction table named from the sorted model names (`{a}_{b}`) with `{model}_id` and `{self}_id` columns. For bidirectional querying, define the relation on both models using the same junction table name with `field`/`index` swapped.
+
+`getCreationCode()` creates the junction table with a composite primary key and indexes on both FK columns. `getRelationCode()` adds foreign keys from the junction table to both related tables.
 
 ### Lifecycle hooks
 
@@ -141,7 +166,8 @@ The query builder (`getConds()`, `getNestedConds()`) produces SQL with named pla
 | `find()` | `SELECT ... FROM table WHERE ... ORDER ... LIMIT ... OFFSET` |
 | `findOne()` | `find()` with `limit = 1`, returns first object or `null` |
 | `count()` | `SELECT COUNT(pk) FROM table WHERE ...` |
-| `findRelated()` | Join with related table based on relation metadata |
+| `findRelated()` | Join with related table based on relation metadata, including `n:n` via junction table |
+| `countRelated()` | `SELECT COUNT(pk) ...` for related records, including `n:n` via junction table |
 | `save()` | `INSERT` for new records, `UPDATE ... LIMIT 1` for existing |
 | `delete()` | `DELETE FROM table WHERE pk = :index LIMIT 1` |
 

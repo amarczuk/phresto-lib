@@ -136,6 +136,13 @@ Framework-owned controller that maps HTTP verbs to CRUD:
 
 The constructor accepts a model name, an optional `RequestContext`, and an optional parent `Model` for related-resource escalation.
 
+### Related-model creation rules
+
+When the URL escalates into a related model (`/product/5/review`), `ModelController::post()` creates a child only when the relation type allows it:
+
+- `1:n` and `1>1` — rejected with HTTP 400. The FK is on the parent/context side, so a nested POST from the child route cannot set it.
+- `n:1`, `1:1`, `1<1`, `n:n` — allowed. For `n:n` the model must implement junction-table persistence itself.
+
 ## `CustomModelController`
 
 User extension point for model REST endpoints. Extending it keeps all generic model REST methods and lets you add custom ones:

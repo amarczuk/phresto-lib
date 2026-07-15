@@ -260,6 +260,13 @@ class MySQLModel extends Model
                 $sql .= ($relation['type'] == '1:n') ? ' GROUP BY m.' . static::INDEX : '';
                 break;
             case 'n:n':
+                $junction = static::getJunction($relation);
+                $conds[] = 'r.' . $model->getIndexField() . ' = :mfield';
+                $binds['mfield'] = $model->getIndex();
+                $sql = "SELECT {$fields} FROM " . static::COLLECTION . ' m
+                 INNER JOIN ' . $junction['collection'] . ' j ON j.' . $junction['index'] . ' = m.' . static::INDEX . '
+                 INNER JOIN ' . $model->getCollection() . ' r ON r.' . $model->getIndexField() . ' = j.' . $junction['field'] . '
+                 WHERE ' . implode(' AND ', $conds);
                 break;
         }
 
@@ -368,6 +375,13 @@ class MySQLModel extends Model
                 $sql .= ($relation['type'] == '1:n') ? ' GROUP BY m.' . static::INDEX : '';
                 break;
             case 'n:n':
+                $junction = static::getJunction($relation);
+                $conds[] = 'r.' . $model->getIndexField() . ' = :mfield';
+                $binds['mfield'] = $model->getIndex();
+                $sql = 'SELECT COUNT(m.' . static::INDEX . ') as cnt FROM ' . static::COLLECTION . ' m
+                 INNER JOIN ' . $junction['collection'] . ' j ON j.' . $junction['index'] . ' = m.' . static::INDEX . '
+                 INNER JOIN ' . $model->getCollection() . ' r ON r.' . $model->getIndexField() . ' = j.' . $junction['field'] . '
+                 WHERE ' . implode(' AND ', $conds);
                 break;
         }
 
@@ -455,6 +469,47 @@ class MySQLModel extends Model
             $sql .= 'CREATE ' . ($is_unique ? 'UNIQUE ' : '') . $idx_type . " INDEX `{$index}` ON `" . static::COLLECTION . '` (`' . implode('`, `', $value['fields']) . "`);\n";
         }
 
+        foreach (static::$_relations as $relation) {
+            if ($relation['type'] !== 'n:n' || !empty($relation['skipfk'])) {
+                continue;
+            }
+            $junction = static::getJunction($relation);
+            $sql .= static::getJunctionCreationCode($db, $junction);
+        }
+
+        return $sql;
+    }
+
+    protected static function getJunction(array $relation): array
+    {
+        if (!empty($relation['junction']) && is_array($relation['junction'])) {
+            return $relation['junction'];
+        }
+
+        $names = [static::NAME, $relation['model']];
+        sort($names);
+
+        return [
+            'collection' => implode('_', $names),
+            'field' => $relation['model'] . '_id',
+            'index' => static::NAME . '_id',
+        ];
+    }
+
+    protected static function getJunctionCreationCode(MySQLConnector $db, array $junction): string
+    {
+        $collection = $junction['collection'];
+        $field = $junction['field'];
+        $index = $junction['index'];
+
+        $sql = "CREATE TABLE IF NOT EXISTS `{$collection}` (\n";
+        $sql .= "  `{$index}` INT NOT NULL,\n";
+        $sql .= "  `{$field}` INT NOT NULL,\n";
+        $sql .= "  PRIMARY KEY (`{$index}`, `{$field}`),\n";
+        $sql .= "  INDEX `idx_{$collection}_{$index}` (`{$index}`),\n";
+        $sql .= "  INDEX `idx_{$collection}_{$field}` (`{$field}`)\n";
+        $sql .= ") ENGINE=InnoDB;\n";
+
         return $sql;
     }
 
@@ -466,29 +521,22 @@ class MySQLModel extends Model
         $fkNames = [];
         $modelIndexes = $db->getIndexes(static::COLLECTION);
 
-        foreach (static::$_relations as $model => $relation) {
-            $sql = '';
-
-            $fkTypes = ['n:1', '1<1', 'n:n'];
-            if (!in_array($relation['type'], $fkTypes) || !empty($relation['skipfk'])) {
+        foreach (static::$_relations as $relation) {
+            if ($relation['type'] == 'n:n' || !in_array($relation['type'], ['n:1', '1<1']) || !empty($relation['skipfk'])) {
                 continue;
             }
 
             $fk = [static::NAME . '__' . $relation['index'], $relation['model'] . '__' . $relation['field']];
-            if ($relation['type'] != 'n:n') {
-                sort($fk);
-            }
+            sort($fk);
             $fkName = implode('__', $fk);
 
             if (array_key_exists($fkName, $modelIndexes)) {
                 continue;
             }
 
-            $relatedTable = $relation['type'] != 'n:n'
-                ? constant("Phresto\\Modules\\Model\\{$relation['model']}::COLLECTION")
-                : static::COLLECTION;
+            $relatedTable = constant("Phresto\\Modules\\Model\\{$relation['model']}::COLLECTION");
 
-            $sql .= "  ADD CONSTRAINT {$fkName}\n";
+            $sql = "  ADD CONSTRAINT {$fkName}\n";
             $sql .= "    FOREIGN KEY ({$relation['index']})\n";
             $sql .= "      REFERENCES {$relatedTable}({$relation['field']})\n";
             if (!empty($relation['dbactions'])) {
@@ -500,25 +548,99 @@ class MySQLModel extends Model
             $sqls[] = $sql;
             $fkNames[] = "CALL PROC_DROP_FOREIGN_KEY('" . static::COLLECTION . "', '{$fkName}');";
         }
-        if (empty($sqls)) {
-            return '';
+
+        $nnsqls = [];
+        $nnfkNames = [];
+        foreach (static::$_relations as $relation) {
+            if ($relation['type'] !== 'n:n' || !empty($relation['skipfk'])) {
+                continue;
+            }
+            $junction = static::getJunction($relation);
+            $junctionIndexes = [];
+            try {
+                $junctionIndexes = $db->getIndexes($junction['collection']);
+            } catch (\Exception $e) {
+                // junction table does not exist yet
+            }
+
+            $fkNamesList = [
+                static::NAME . '__' . $junction['index'] => [
+                    'field' => $junction['index'],
+                    'table' => static::COLLECTION,
+                    'refField' => static::INDEX,
+                ],
+                $relation['model'] . '__' . $junction['field'] => [
+                    'field' => $junction['field'],
+                    'table' => constant("Phresto\\Modules\\Model\\{$relation['model']}::COLLECTION"),
+                    'refField' => constant("Phresto\\Modules\\Model\\{$relation['model']}::INDEX"),
+                ],
+            ];
+
+            foreach ($fkNamesList as $nnFkName => $nnFk) {
+                if (array_key_exists($nnFkName, $junctionIndexes)) {
+                    continue;
+                }
+                $nnfkNames[] = "CALL PROC_DROP_FOREIGN_KEY('{$junction['collection']}', '{$nnFkName}');";
+                $nnSql = "  ADD CONSTRAINT {$nnFkName}\n";
+                $nnSql .= "    FOREIGN KEY ({$nnFk['field']})\n";
+                $nnSql .= "      REFERENCES {$nnFk['table']}({$nnFk['refField']})\n";
+                if (!empty($relation['dbactions'])) {
+                    $nnSql .= "      {$relation['dbactions']}";
+                } else {
+                    $nnSql .= '      ON UPDATE CASCADE ON DELETE CASCADE';
+                }
+                $nnsqls[] = $nnSql;
+            }
         }
 
-        $sql = implode(",\n", $sqls) . ";\n";
-
-        if (!empty(trim($sql)) && count($fkNames) > 0) {
-            return implode("\n", $fkNames) . "\nALTER TABLE `" . static::COLLECTION . "` \n" . $sql;
+        $output = '';
+        if (!empty($fkNames)) {
+            $output .= implode("\n", $fkNames) . "\n";
+        }
+        if (!empty($nnfkNames)) {
+            $output .= implode("\n", array_unique($nnfkNames)) . "\n";
         }
 
-        if (!empty(trim($sql))) {
-            return 'ALTER TABLE `' . static::COLLECTION . "` \n" . $sql;
+        if (!empty($sqls)) {
+            $output .= "ALTER TABLE `" . static::COLLECTION . "` \n" . implode(",\n", $sqls) . ";\n";
         }
 
-        if (count($fkNames) > 0) {
-            return implode("\n", $fkNames);
+        $nnOutput = [];
+        foreach (static::$_relations as $relation) {
+            if ($relation['type'] !== 'n:n' || !empty($relation['skipfk'])) {
+                continue;
+            }
+            $junction = static::getJunction($relation);
+            $nnOutput[$junction['collection']] = [];
         }
 
-        return '';
+        foreach ($nnsqls as $nnSql) {
+            foreach (static::$_relations as $relation) {
+                if ($relation['type'] !== 'n:n' || !empty($relation['skipfk'])) {
+                    continue;
+                }
+                $junction = static::getJunction($relation);
+                $fkNamesList = [
+                    static::NAME . '__' . $junction['index'],
+                    $relation['model'] . '__' . $junction['field'],
+                ];
+                foreach ($fkNamesList as $fkName) {
+                    if (strpos($nnSql, "ADD CONSTRAINT {$fkName}") !== false) {
+                        $nnOutput[$junction['collection']][] = $nnSql;
+                        break;
+                    }
+                }
+            }
+        }
+
+        foreach ($nnOutput as $collection => $nnSqlsForTable) {
+            if (empty($nnSqlsForTable)) {
+                continue;
+            }
+            $output .= "ALTER TABLE `{$collection}` \n" . implode(",\n", $nnSqlsForTable) . ";\n";
+        }
+
+        return trim($output);
     }
 
     private static function getSqlType($type)
