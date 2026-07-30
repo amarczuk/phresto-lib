@@ -210,7 +210,8 @@ class ModelController extends Controller
             throw new RequestException('Not found', 404);
         }
 
-        if (empty($this->body)) {
+        $body = $this->body;
+        if (empty($body)) {
             throw new RequestException('No content', 204);
         }
 
@@ -218,7 +219,7 @@ class ModelController extends Controller
         if (empty($modelInstance->id)) {
             throw new RequestException('Not found', 404);
         }
-        $modelInstance->update($this->body);
+        $modelInstance->update($body);
         $modelInstance->save();
 
         return Response::json($modelInstance);
@@ -236,12 +237,13 @@ class ModelController extends Controller
             throw new RequestException('Bad request', 400);
         }
 
-        if (empty($this->body)) {
+        $body = $this->body;
+        if (empty($body)) {
             throw new RequestException('No content', 204);
         }
 
         $modelInstance = Container::{$this->modelName}($id);
-        $modelInstance->update($this->body);
+        $modelInstance->update($body);
         $modelInstance->save();
 
         return Response::json($modelInstance);

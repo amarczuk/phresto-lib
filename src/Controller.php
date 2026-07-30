@@ -65,6 +65,11 @@ class Controller
         return null;
     }
 
+    public function __isset($name)
+    {
+        return in_array($name, ['reqType', 'route', 'headers', 'body', 'query', 'bodyRaw'], true);
+    }
+
     protected function getRouteMapping($reqType)
     {
         if (isset($this->routeMapping[$reqType]) && is_array($this->routeMapping[$reqType])) {
