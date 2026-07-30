@@ -6,24 +6,23 @@ namespace Phresto;
 
 use Phresto\Exception\RequestException;
 use Phresto\Interf\RequestContext as RequestContextInterface;
-use ReflectionClass;
 use TypeError;
 
 class ModelController extends Controller
 {
     public const CLASSNAME = __CLASS__;
 
-    protected $routeMapping = [ 'all' => [ 'id' => 0 ] ];
+    protected array $routeMapping = [ 'all' => [ 'id' => 0 ] ];
 
-    protected $modelName;
+    protected string $modelName;
 
-    protected $contextModel;
+    protected null|Model $contextModel;
 
-    protected $methodName;
+    protected string $methodName;
 
     protected static $type = 'model';
 
-    public function __construct($modelName, ?RequestContextInterface $requestContext = null, ?Model $contextModel = null)
+    public function __construct(string $modelName, ?RequestContextInterface $requestContext = null, ?Model $contextModel = null)
     {
         $this->modelName = $modelName;
         $this->contextModel = $contextModel;

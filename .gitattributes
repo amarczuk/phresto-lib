@@ -1,1 +1,5 @@
 test/ export-ignore
+docs/dev/ export-ignore
+.specs/ export-ignore
+.editorconfig export-ignore
+.php-cs-fixer.php export-ignore
