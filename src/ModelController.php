@@ -12,7 +12,7 @@ class ModelController extends Controller
 {
     public const CLASSNAME = __CLASS__;
 
-    protected array $routeMapping = [ 'all' => [ 'id' => 0 ] ];
+    protected $routeMapping = [ 'all' => [ 'id' => 0 ] ];
 
     protected string $modelName;
 
