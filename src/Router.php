@@ -174,7 +174,7 @@ class Router
      * @param string                  $className
      * @return RequestContextInterface
      */
-    protected static function applyMiddlewares(RequestContextInterface $context, string $className): RequestContextInterface
+    public static function applyMiddlewares(RequestContextInterface $context, string $className): RequestContextInterface
     {
         $middlewares = self::$middlewares;
 

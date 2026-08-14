@@ -92,13 +92,21 @@ class ModelController extends Controller
             throw new RequestException('Not found', 404);
         }
 
-        $modelClass = 'Phresto\\Modules\\Model\\' . $model;
         $newRoute = $this->getNextRoute();
-        array_shift($newRoute);
+        $childName = array_shift($newRoute);
         $childContext = $this->requestContext->withRoute($newRoute);
-        $modelContr = Container::{'Phresto\\ModelController'}($modelClass, $childContext, $thisModel);
-
-        return $modelContr->exec();
+        if (class_exists('Phresto\\Modules\\Controller\\' . $childName)) {
+            $controllerClass = 'Phresto\\Modules\\Controller\\' . $childName;
+            $requestContext = Router::applyMiddlewares($childContext, $controllerClass);
+            $instance = Container::{$controllerClass}($requestContext, $thisModel);
+        } elseif (class_exists('Phresto\\Modules\\Model\\' . $childName)) {
+            $modelClass = 'Phresto\\Modules\\Model\\' . $childName;
+            $requestContext = Router::applyMiddlewares($childContext, $modelClass);
+            $instance = Container::ModelController($modelClass, $requestContext, $thisModel);
+        } else {
+            throw new RequestException('Not found', 404);
+        }
+        return $instance->exec();
     }
 
     /**
